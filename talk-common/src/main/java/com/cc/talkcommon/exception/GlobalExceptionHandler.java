@@ -11,16 +11,24 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 public class GlobalExceptionHandler {
 
-    // 捕获所有运行时异常
+    // 1. 捕获自定义业务异常 BaseException
+    @ExceptionHandler(BaseException.class)
+    public Result<?> handleBaseException(BaseException e) {
+        // 直接返回异常中定义的错误码和信息
+        return Result.error(e.getCode(), e.getMsg());
+    }
+
+    // 2. 捕获运行时异常
     @ExceptionHandler(RuntimeException.class)
     public Result<String> handleRuntimeException(RuntimeException e) {
-        // 返回统一错误结构
+        e.printStackTrace();  // 生产环境可换成日志打印
         return Result.error("运行时异常：" + e.getMessage());
     }
 
-    // 捕获所有其他异常
+    // 3. 捕获所有其他异常
     @ExceptionHandler(Exception.class)
     public Result<String> handleException(Exception e) {
+        e.printStackTrace();
         return Result.error("系统异常：" + e.getMessage());
     }
 }

@@ -1,0 +1,70 @@
+package com.cc.talkpojo.entity;
+
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import java.time.LocalDateTime;
+import java.io.Serializable;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.Accessors;
+
+/**
+ * <p>
+ * 用户书单表
+ * </p>
+ *
+ * @author cc
+ * @since 2025-06-30
+ */
+@Data
+@EqualsAndHashCode(callSuper = false)
+@Accessors(chain = true)
+@TableName("book_list")
+public class BookList implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * 书单ID
+     */
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
+
+    /**
+     * 创建者ID
+     */
+    private Long userId;
+
+    /**
+     * 书单标题
+     */
+    private String title;
+
+    /**
+     * 书单简介
+     */
+    private String description;
+
+    /**
+     * 封面图（可选）
+     */
+    private String coverUrl;
+
+    /**
+     * 是否公开（1公开/0私密）
+     */
+    private Integer visibility;
+
+    /**
+     * 创建时间
+     */
+    private LocalDateTime createTime;
+
+    /**
+     * 修改时间
+     */
+    private LocalDateTime updateTime;
+
+
+}
