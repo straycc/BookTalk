@@ -30,6 +30,10 @@ public class Result<T>{
     public static <T> Result<T> success() {
         return new Result<T>(ResultCode.SUCCESS, "操作成功", null);
     }
+    // 成功返回（自定义消息）
+    public static <T> Result<T> success(String msg) {
+        return new Result<T>(ResultCode.SUCCESS, msg, null);
+    }
 
     // 失败返回（自定义消息）
     public static <T> Result<T> error(String msg) {

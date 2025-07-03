@@ -1,0 +1,22 @@
+package com.cc.talkpojo.dto;
+
+
+import lombok.Data;
+
+import javax.validation.constraints.NotBlank;
+
+@Data
+public class UserRegisterDTO {
+    @NotBlank(message = "用户名不能为空")
+    private String username;
+
+    @NotBlank(message = "密码不能为空")
+    private String password;
+
+    @NotBlank(message = "确认密码不能为空")
+    private String confirmPassword;
+
+    private String email;
+
+    private String nickname;
+}
