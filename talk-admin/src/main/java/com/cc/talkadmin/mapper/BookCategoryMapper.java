@@ -1,7 +1,8 @@
 package com.cc.talkadmin.mapper;
 
-import com.cc.talkadmin.entity.BookCategory;
+import com.cc.talkpojo.entity.BookCategory;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.cc.talkpojo.entity.BookCategory;
 
 /**
  * <p>

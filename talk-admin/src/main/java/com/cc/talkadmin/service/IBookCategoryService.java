@@ -1,6 +1,6 @@
 package com.cc.talkadmin.service;
 
-import com.cc.talkadmin.entity.BookCategory;
+import com.cc.talkpojo.entity.BookCategory;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
