@@ -11,10 +11,6 @@ import springfox.documentation.service.ApiInfo;
 import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 @Configuration
 @EnableKnife4j
 public class Knife4jConfig {
