@@ -26,8 +26,6 @@ spring:
     uris: 192.168.72.128:9200
     connection-timeout: 1s
     socket-timeout: 30s
-
-
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher

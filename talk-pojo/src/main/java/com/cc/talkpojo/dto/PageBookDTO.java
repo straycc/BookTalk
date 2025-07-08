@@ -29,9 +29,9 @@ public class PageBookDTO {
     /** 标签筛选*/
     private List<Long> tagIds;
 
-
+    /** 排序属性*/
     private String sortField;
 
-
+    /** 排序规则*/
     private String sortOrder;
 }

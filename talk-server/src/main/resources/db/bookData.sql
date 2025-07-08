@@ -3,7 +3,14 @@
 CREATE TABLE book (
                       id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '图书ID',
                       title VARCHAR(255) NOT NULL COMMENT '书名',
+                      original_title VARCHAR(255) DEFAULT NULL COMMENT '原作名称（外文原名）',
                       author VARCHAR(100) DEFAULT NULL COMMENT '作者',
+                      author_country VARCHAR(100) DEFAULT NULL COMMENT '作者国籍',
+                      translator VARCHAR(100) DEFAULT NULL COMMENT '译者',
+                      publisher VARCHAR(255) DEFAULT NULL COMMENT '出版社',
+                      producer VARCHAR(255) DEFAULT NULL COMMENT '出品方/品牌方',
+                      publish_date DATE DEFAULT NULL COMMENT '出版时间',
+                      price DECIMAL(10,2) DEFAULT NULL COMMENT '价格',
                       isbn VARCHAR(50) UNIQUE COMMENT 'ISBN编号',
                       cover_url VARCHAR(255) DEFAULT NULL COMMENT '封面图片URL',
                       description TEXT COMMENT '图书简介',
@@ -15,6 +22,7 @@ CREATE TABLE book (
                       update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                       INDEX idx_category_id (category_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='图书主表';
+
 
 
 #书籍分类表

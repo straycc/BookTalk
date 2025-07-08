@@ -25,6 +25,7 @@ public class LoginInterceptor implements HandlerInterceptor {
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             response.setStatus(HttpStatus.HTTP_UNAUTHORIZED);
+            response.setCharacterEncoding("UTF-8");
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"message\":\"未登录：缺少Token\"}");
             return false;

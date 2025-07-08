@@ -35,6 +35,11 @@ public class Result<T>{
         return new Result<T>(ResultCode.SUCCESS, msg, null);
     }
 
+    // 成功返回（自定义消息 + 数据）
+    public static <T> Result<T> success(String msg, T data) {
+        return new Result<T>(ResultCode.SUCCESS, msg, data);
+    }
+
     // 失败返回（自定义消息）
     public static <T> Result<T> error(String msg) {
         return new Result<T>(ResultCode.FAIL, msg, null);

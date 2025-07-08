@@ -14,22 +14,22 @@ public class JwtUtil {
 
     private static final String SECRET_KEY = "my-secret-123456";
 
-    // 生成 Token
     public static String generateToken(UserDTO userDTO) {
         Map<String, Object> payload = new HashMap<>();
-        //载荷
         payload.put("userId", userDTO.getId());
-        payload.put("userName", userDTO.getUsername());
+        payload.put("username", userDTO.getUsername());
         payload.put("status", userDTO.getStatus());
-        //过期时间
-        payload.put("expire", DateUtil.offsetHour(new Date(), 2)); // 2小时过期
+
+        // 2小时后过期，放入秒级时间戳
+        Date expireDate = DateUtil.offsetHour(new Date(), 2);
+        long expireTimestamp = expireDate.getTime() / 1000;
+        payload.put("expire", expireTimestamp);
 
         return JWT.create()
                 .addPayloads(payload)
                 .setKey(SECRET_KEY.getBytes())
                 .sign();
     }
-
     // 验证并解析 Token，返回 JWT 对象
     public static JWT verifyToken(String token) {
         JWT jwt = JWTUtil.parseToken(token).setKey(SECRET_KEY.getBytes());
@@ -37,10 +37,20 @@ public class JwtUtil {
             throw new BaseException("Invalid token");
         }
 
-        Date expire = DateUtil.parse(jwt.getPayload("expire").toString());
+        Object expireObj = jwt.getPayload("expire");
+        long expireTimestamp;
+        if (expireObj instanceof Number) {
+            expireTimestamp = ((Number) expireObj).longValue();
+        } else {
+            // 如果是字符串，尝试转成数字
+            expireTimestamp = Long.parseLong(expireObj.toString());
+        }
+
+        Date expire = new Date(expireTimestamp * 1000L);  // 秒转毫秒
         if (expire.before(new Date())) {
             throw new BaseException("Token expired");
         }
+
         return jwt;
     }
 

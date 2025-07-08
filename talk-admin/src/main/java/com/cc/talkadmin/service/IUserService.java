@@ -2,8 +2,10 @@ package com.cc.talkadmin.service;
 
 import com.cc.talkpojo.Result.PageResult;
 import com.cc.talkpojo.dto.PageUserDTO;
+import com.cc.talkpojo.dto.UserLoginDTO;
 import com.cc.talkpojo.entity.User;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.cc.talkpojo.vo.UserLoginVO;
 
 /**
  * <p>
@@ -16,4 +18,6 @@ import com.baomidou.mybatisplus.extension.service.IService;
 public interface IUserService extends IService<User> {
 
     PageResult getPageUser(PageUserDTO pageUserDTO);
+
+    UserLoginVO login(UserLoginDTO userLoginDTO);
 }

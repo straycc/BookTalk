@@ -4,6 +4,8 @@ import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.cc.talkadmin.service.IBookService;
 import com.cc.talkcommon.constant.ElasticsearchConstant;
 import com.cc.talkcommon.exception.BaseException;
 import com.cc.talkcommon.utils.ConvertUtils;
@@ -14,8 +16,8 @@ import com.cc.talkpojo.dto.BookEsDTO;
 import com.cc.talkpojo.dto.PageBookDTO;
 import com.cc.talkpojo.entity.Book;
 import com.cc.talkadmin.mapper.BookMapper;
-import com.cc.talkadmin.service.IBookService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.cc.talkpojo.entity.BookCategory;
 import com.cc.talkpojo.vo.BookVO;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
@@ -24,12 +26,10 @@ import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.client.ElasticsearchClient;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -333,8 +333,8 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements IB
 
         // 1. MySQL 删除
         int num = bookMapper.deleteByIds(ids);
-        if (num == 0) {
-            throw new BaseException("数据库中未找到对应记录");
+        if (num != ids.size()) {
+            throw new BaseException("批量删除失败!");
         }
 
         // 2. Elasticsearch 批量删除

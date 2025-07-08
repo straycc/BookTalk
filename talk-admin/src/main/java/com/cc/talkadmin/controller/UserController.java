@@ -5,16 +5,16 @@ import com.cc.talkadmin.service.IUserService;
 import com.cc.talkcommon.result.Result;
 import com.cc.talkpojo.Result.PageResult;
 import com.cc.talkpojo.dto.PageUserDTO;
-import com.cc.talkpojo.vo.PageUserVO;
+import com.cc.talkpojo.dto.UserLoginDTO;
+import com.cc.talkpojo.vo.UserLoginVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
 
-import org.springframework.stereotype.Controller;
+
+import javax.annotation.Resource;
+import javax.validation.Valid;
 
 /**
  * <p>
@@ -24,15 +24,24 @@ import org.springframework.stereotype.Controller;
  * @author cc
  * @since 2025-07-05
  */
-@Controller
+@RestController
 @RequestMapping("/admin")
-
-@Api(tags = "用户管理相关接口")
+@Api(tags = "用户管理接口")
+@Slf4j
 public class UserController {
 
 
-    private static final Logger log = LoggerFactory.getLogger(UserController.class);
+    @Resource
     private IUserService userService;
+
+
+    @ApiOperation("用户登录")
+    @PostMapping("/login")
+    public Result<Object> login(@Valid @RequestBody UserLoginDTO UserLoginDTO) {
+        log.info("用户："+UserLoginDTO.getUsername()+"请求登录!");
+        UserLoginVO userLoginVO = userService.login(UserLoginDTO);
+        return Result.success(userLoginVO);
+    }
 
 
     /**
@@ -47,10 +56,6 @@ public class UserController {
         PageResult pageResult = userService.getPageUser(pageUserDTO);
         return Result.success(pageResult);
     }
-
-
-
-
 
 
 

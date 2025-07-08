@@ -2,7 +2,6 @@ package com.cc.talkadmin.mapper;
 
 import com.cc.talkpojo.entity.BookCategory;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.cc.talkpojo.entity.BookCategory;
 
 /**
  * <p>
@@ -12,6 +11,6 @@ import com.cc.talkpojo.entity.BookCategory;
  * @author cc
  * @since 2025-07-07
  */
-public interface BookCategoryMapper extends BaseMapper<BookCategory> {
+public interface CategoryMapper extends BaseMapper<BookCategory> {
 
 }
