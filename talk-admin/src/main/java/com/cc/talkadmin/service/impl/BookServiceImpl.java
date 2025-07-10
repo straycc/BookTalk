@@ -202,7 +202,7 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements IB
     }
 
     /**
-     * 图书信息分类查询
+     * 图书信息分页查询
      * @param pageBookDTO
      * @return
      */
@@ -295,7 +295,7 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements IB
 
 
     /**
-     *
+     * 删除单本图书
      * @param id
      */
     @Override

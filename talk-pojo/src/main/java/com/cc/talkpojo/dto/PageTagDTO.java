@@ -1,13 +1,17 @@
 package com.cc.talkpojo.dto;
 
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
-public class PageCategoryDTO implements PageDTO{
+public class PageTagDTO implements PageDTO{
 
     /**
      * 页面号
@@ -20,7 +24,12 @@ public class PageCategoryDTO implements PageDTO{
     private Integer pageSize;
 
     /**
-     * 分类名称
+     * 分类 ID
+     */
+    private Long categoryId;
+
+    /**
+     * 标签名称
      */
     private String name;
 
@@ -29,9 +38,9 @@ public class PageCategoryDTO implements PageDTO{
      */
     private LocalDate createdFrom;
 
-
     /**
      * 结束时间
      */
     private LocalDate createdTo;
+
 }

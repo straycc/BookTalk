@@ -2,10 +2,11 @@ package com.cc.talkpojo.dto;
 
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
-public class PageBookDTO {
+public class PageBookDTO implements PageDTO{
 
     /** 页面号*/
     private Integer pageNum;
@@ -34,4 +35,10 @@ public class PageBookDTO {
 
     /** 排序规则*/
     private String sortOrder;
+
+    /** 起始时间*/
+    private LocalDate createdFrom;
+
+    /** 结束时间*/
+    private LocalDate createdTo;
 }

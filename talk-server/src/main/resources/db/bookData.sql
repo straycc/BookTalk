@@ -78,6 +78,7 @@ CREATE TABLE book_list_item (
 #书籍表签表
 CREATE TABLE book_tag (
                           id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '标签ID',
+                          category_id BIGINT DEFAULT NULL COMMENT '分类ID',
                           name VARCHAR(50) NOT NULL UNIQUE COMMENT '标签名称',
                           description TEXT COMMENT '标签描述',
                           create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
