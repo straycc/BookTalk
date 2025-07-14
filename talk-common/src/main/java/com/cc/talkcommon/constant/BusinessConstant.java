@@ -12,6 +12,7 @@ public class BusinessConstant {
     public static final String TAG_UPDATE_ERROR = "标签更新失败";
     public static final String TAG_DELETE_ERROR = "标签删除失败";
 
-
+    //book相关
+    public static final String BOOK_NOTEXIST = "书籍不存在";
 
 }

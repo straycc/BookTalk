@@ -9,8 +9,15 @@ import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
 @EnableConfigurationProperties(AliOssProperties.class)
-@MapperScan("com.cc.talkadmin.mapper")
-@ComponentScan(basePackages = {"com.cc.talkcommon", "com.cc.talkadmin", "com.cc.talkserver"})
+@MapperScan("com.cc.talkserver.admin.mapper")
+@ComponentScan(basePackages = {
+        "com.cc.talkcommon",
+        "com.cc.talkadmin",
+        "com.cc.talkserver.admin",
+        "com.cc.talkserver.config",
+
+})
+
 public class TalkAdminApplication {
 
     public static void main(String[] args) {

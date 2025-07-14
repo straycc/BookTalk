@@ -21,7 +21,30 @@ spring:
   aop:
     auto: true
 
-
+  elasticsearch:
+    uris: 192.168.72.128:9200
+    connection-timeout: 1s
+    socket-timeout: 30s
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
+
+
+
+aliyun:
+  oss:
+    endpoint: ${ALIYUN_ENDPOINT}
+    access-key-id: ${ALIYUN_ACCESS_KEY_ID}
+    access-key-secret: ${ALIYUN_ACCESS_KEY_SECRET}
+    bucket-name: ${ALIYUN_BUCKET_NAME}
+
+
+logging:
+  level:
+    root: info
+    com.cc.talkadmin: debug
+
+
+
+server:
+  port: 8082

@@ -10,7 +10,7 @@ import com.cc.talkpojo.dto.UserProfileDTO;
 import com.cc.talkpojo.dto.UserRegisterDTO;
 import com.cc.talkpojo.vo.UserLoginVO;
 import com.cc.talkpojo.vo.UserVO;
-import com.cc.talkuser.service.IUserService;
+import com.cc.talkserver.user.service.UserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +36,7 @@ import javax.validation.Valid;
 public class UserController {
 
     @Resource
-    private IUserService userService;
+    private UserService userService;
 
 
     /**

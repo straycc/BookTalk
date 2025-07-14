@@ -1,6 +1,7 @@
 package com.cc.talkpojo.dto;
 
 import lombok.Data;
+import lombok.extern.java.Log;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -14,12 +15,14 @@ public class PageBookDTO implements PageDTO{
     /** 页面大小*/
     private Integer pageSize;
 
-    // 搜索条件
     /** 书名*/
     private String isbn;
 
     /** 书名*/
     private String title;
+
+    /** 出版时间*/
+    private LocalDate publishDate;
 
     /** 作者*/
     private String author;
@@ -28,7 +31,7 @@ public class PageBookDTO implements PageDTO{
     private Long categoryId;
 
     /** 标签筛选*/
-    private List<Long> tagIds;
+    private Long tagId;
 
     /** 排序属性*/
     private String sortField;

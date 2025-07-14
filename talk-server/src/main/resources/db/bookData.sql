@@ -1,27 +1,53 @@
 
 #书籍基本信息表
+-- 修改版：书籍基本信息表
 CREATE TABLE book (
-                      id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '图书ID',
+                      id BIGINT PRIMARY KEY COMMENT '图书ID',
+
+    -- 核心元数据
                       title VARCHAR(255) NOT NULL COMMENT '书名',
+                      sub_title VARCHAR(255) DEFAULT NULL COMMENT '副标题',
                       original_title VARCHAR(255) DEFAULT NULL COMMENT '原作名称（外文原名）',
+                      description TEXT COMMENT '图书简介',
+
+    -- 作者与译者
                       author VARCHAR(100) DEFAULT NULL COMMENT '作者',
                       author_country VARCHAR(100) DEFAULT NULL COMMENT '作者国籍',
                       translator VARCHAR(100) DEFAULT NULL COMMENT '译者',
+
+    -- 出版信息
+                      series VARCHAR(255) DEFAULT NULL COMMENT '出版系列',
                       publisher VARCHAR(255) DEFAULT NULL COMMENT '出版社',
                       producer VARCHAR(255) DEFAULT NULL COMMENT '出品方/品牌方',
                       publish_date DATE DEFAULT NULL COMMENT '出版时间',
                       price DECIMAL(10,2) DEFAULT NULL COMMENT '价格',
-                      isbn VARCHAR(50) UNIQUE COMMENT 'ISBN编号',
+
+    -- 物理特征
                       cover_url VARCHAR(255) DEFAULT NULL COMMENT '封面图片URL',
-                      description TEXT COMMENT '图书简介',
+                      page_count INT DEFAULT NULL COMMENT '页数',
+                      binding_type VARCHAR(100) DEFAULT NULL COMMENT '装帧类型',
+
+    -- 分类与评分
                       category_id BIGINT DEFAULT NULL COMMENT '分类ID（单分类）',
                       average_score DECIMAL(3,1) DEFAULT 0 COMMENT '平均评分',
+                      stars_5_top DECIMAL(5,2) DEFAULT 0 COMMENT '五星评价占比',
+                      stars_4_top DECIMAL(5,2) DEFAULT 0 COMMENT '四星评价占比',
+                      stars_3_top DECIMAL(5,2) DEFAULT 0 COMMENT '三星评价占比',
+                      stars_2_top DECIMAL(5,2) DEFAULT 0 COMMENT '二星评价占比',
+                      stars_1_top DECIMAL(5,2) DEFAULT 0 COMMENT '一星评价占比',
                       score_count INT DEFAULT 0 COMMENT '评分人数',
                       favorite_count INT DEFAULT 0 COMMENT '收藏人数',
+
+    -- ISBN
+                      isbn VARCHAR(50) UNIQUE COMMENT 'ISBN编号',
+
+    -- 系统时间
                       create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                       update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+
                       INDEX idx_category_id (category_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='图书主表';
+
 
 
 
@@ -75,15 +101,16 @@ CREATE TABLE book_list_item (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='书单与图书关联表';
 
 
-#书籍表签表
-CREATE TABLE book_tag (
+#标签表
+CREATE TABLE tag (
                           id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '标签ID',
                           category_id BIGINT DEFAULT NULL COMMENT '分类ID',
                           name VARCHAR(50) NOT NULL UNIQUE COMMENT '标签名称',
+                          usage_count BIGINT default 0 not null comment '标签使用次数',
                           description TEXT COMMENT '标签描述',
                           create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                           update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='图书标签表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='标签表';
 
 #图书-标签关联表
 CREATE TABLE book_tag_relation (

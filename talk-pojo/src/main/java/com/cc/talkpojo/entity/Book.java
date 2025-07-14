@@ -34,7 +34,7 @@ public class Book implements Serializable {
     /**
      * 图书ID
      */
-    @TableId(value = "id", type = IdType.AUTO)
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
 
     /**
@@ -47,6 +47,11 @@ public class Book implements Serializable {
      * 书名
      */
     private String title;
+
+    /**
+     * 副标题
+     */
+    private String subTitle;
 
     /**
      * 原作名称（外文原名）
@@ -76,17 +81,19 @@ public class Book implements Serializable {
 
     // 出版信息
     /**
+     * 出版系列
+     */
+    private String series;
+
+    /**
      * 出版社
      */
     private String publisher;
-
 
     /**
      * 出品方/品牌方
      */
     private String producer;
-
-
 
     /**
      * 出版时间
@@ -104,6 +111,16 @@ public class Book implements Serializable {
      */
     private String coverUrl;
 
+    /**
+     * 页数
+     */
+    private Integer pageCount;
+
+    /**
+     * 装帧类型
+     */
+    private String bindingType;
+
     //  分类与统计
     /**
      * 分类ID（单分类）
@@ -114,6 +131,32 @@ public class Book implements Serializable {
      * 平均评分
      */
     private BigDecimal averageScore;
+
+    /**
+     * 五星评价占比
+     */
+    private BigDecimal stars5Top;
+
+    /**
+     * 四星评价占比
+     */
+    private BigDecimal stars4Top;
+
+    /**
+     * 三星评价占比
+     */
+    private BigDecimal stars3Top;
+
+    /**
+     * 二星评价占比
+     */
+    private BigDecimal stars2Top;
+
+    /**
+     * 一星评价占比
+     */
+    private BigDecimal stars1Top;
+
 
     /**
      * 评分人数
