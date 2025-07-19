@@ -6,14 +6,18 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 
-//@Component
-//public class HotBookCacheTask {
-//
-//    @Resource
-//    private BookAdminService bookAdminService;
-//
-//    @Scheduled(cron = "0 0 2 1 * ?") // 每月1号凌晨2点执行
-//    public void refreshMonthlyHotBooksCache() {
-//        bookAdminService.refreshHotBooksCache();
-//    }
-//}
+@Component
+public class HotBookCacheTask {
+
+    @Resource
+    private BookAdminService bookAdminService;
+
+    /**
+     * 刷新热门图书缓存
+     */
+    @Scheduled(cron = "0 0 2 1 * ?") // 每月1号凌晨2点执行
+    public void refreshMonthlyHotBooksCache() {
+
+        bookAdminService.refreshHotBooksCache();
+    }
+}

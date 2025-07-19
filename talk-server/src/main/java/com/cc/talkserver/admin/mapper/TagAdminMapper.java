@@ -3,6 +3,9 @@ package com.cc.talkserver.admin.mapper;
 import com.cc.talkpojo.entity.Tag;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
  * <p>
@@ -15,4 +18,11 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface TagAdminMapper extends BaseMapper<Tag> {
 
+
+    /**
+     * 查询热门标签
+     * @param limit
+     * @return
+     */
+    List<Tag> selectHotTagsByUsageCount(@Param("limit") int limit);
 }

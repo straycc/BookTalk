@@ -15,7 +15,6 @@ import org.springframework.context.annotation.ComponentScan;
         "com.cc.talkadmin",
         "com.cc.talkserver.admin",
         "com.cc.talkserver.config",
-
 })
 
 public class TalkAdminApplication {

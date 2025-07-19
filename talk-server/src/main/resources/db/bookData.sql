@@ -30,11 +30,11 @@ CREATE TABLE book (
     -- 分类与评分
                       category_id BIGINT DEFAULT NULL COMMENT '分类ID（单分类）',
                       average_score DECIMAL(3,1) DEFAULT 0 COMMENT '平均评分',
-                      stars_5_top DECIMAL(5,2) DEFAULT 0 COMMENT '五星评价占比',
-                      stars_4_top DECIMAL(5,2) DEFAULT 0 COMMENT '四星评价占比',
-                      stars_3_top DECIMAL(5,2) DEFAULT 0 COMMENT '三星评价占比',
-                      stars_2_top DECIMAL(5,2) DEFAULT 0 COMMENT '二星评价占比',
-                      stars_1_top DECIMAL(5,2) DEFAULT 0 COMMENT '一星评价占比',
+                      stars5_top DECIMAL(5,2) DEFAULT 0 COMMENT '五星评价占比',
+                      stars4_top DECIMAL(5,2) DEFAULT 0 COMMENT '四星评价占比',
+                      stars3_top DECIMAL(5,2) DEFAULT 0 COMMENT '三星评价占比',
+                      stars2_top DECIMAL(5,2) DEFAULT 0 COMMENT '二星评价占比',
+                      stars1_top DECIMAL(5,2) DEFAULT 0 COMMENT '一星评价占比',
                       score_count INT DEFAULT 0 COMMENT '评分人数',
                       favorite_count INT DEFAULT 0 COMMENT '收藏人数',
 

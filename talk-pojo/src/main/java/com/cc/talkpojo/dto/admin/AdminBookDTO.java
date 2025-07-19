@@ -1,42 +1,22 @@
-package com.cc.talkpojo.entity;
+package com.cc.talkpojo.dto.admin;
 
+
+import lombok.Data;
+
+import java.io.Serializable;
 import java.math.BigDecimal;
-
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.io.Serializable;
 
-import lombok.*;
-import lombok.experimental.Accessors;
-
-/**
- * <p>
- * 图书主表
- * </p>
- *
- * @author cc
- * @since 2025-06-30
- */
 @Data
-@EqualsAndHashCode(callSuper = false)
-@Accessors(chain = true)
-@TableName("book")
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor(access = AccessLevel.PUBLIC)
-public class Book implements Serializable {
+public class AdminBookDTO implements Serializable {
+
     private static final long serialVersionUID = 1L;
 
-    //  基础标识信息
+
     /**
      * 图书ID
      */
-    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
 
     /**
@@ -137,31 +117,26 @@ public class Book implements Serializable {
     /**
      * 五星评价占比
      */
-    @TableField("stars5_top")
     private BigDecimal stars5Top;
 
     /**
      * 四星评价占比
      */
-    @TableField("stars4_top")
     private BigDecimal stars4Top;
 
     /**
      * 三星评价占比
      */
-    @TableField("stars3_top")
     private BigDecimal stars3Top;
 
     /**
      * 二星评价占比
      */
-    @TableField("stars2_top")
     private BigDecimal stars2Top;
 
     /**
      * 一星评价占比
      */
-    @TableField("stars1_top")
     private BigDecimal stars1Top;
 
 
@@ -175,7 +150,6 @@ public class Book implements Serializable {
      */
     private Integer favoriteCount;
 
-    //  系统元数据
     /**
      * 创建时间
      */
@@ -185,4 +159,6 @@ public class Book implements Serializable {
      * 更新时间
      */
     private LocalDateTime updateTime;
+
+
 }

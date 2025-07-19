@@ -31,6 +31,7 @@ public class BuildQueryWrapper {
         if (pageBookDTO.getCategoryId() != null) {
             wrapper.eq(Book::getCategoryId, pageBookDTO.getCategoryId());
         }
+
         // 排序条件
         if (StringUtils.isNotBlank(pageBookDTO.getSortField())) {
             wrapper.orderBy(true,

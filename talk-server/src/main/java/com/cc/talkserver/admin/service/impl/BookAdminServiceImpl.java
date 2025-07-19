@@ -1,39 +1,49 @@
 package com.cc.talkserver.admin.service.impl;
 import cn.hutool.json.JSONUtil;
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.Result;
+import co.elastic.clients.elasticsearch.core.*;
+import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.cc.talkcommon.constant.BusinessConstant;
 import com.cc.talkcommon.constant.ElasticsearchConstant;
+import com.cc.talkcommon.constant.RedisCacheConstant;
 import com.cc.talkcommon.exception.BaseException;
 import com.cc.talkcommon.utils.BuildQueryWrapper;
 import com.cc.talkcommon.utils.ConvertUtils;
 import com.cc.talkpojo.Result.PageResult;
 import com.cc.talkpojo.Result.UploadResult;
 import com.cc.talkpojo.dto.BookDTO;
-import com.cc.talkpojo.dto.BookEsDTO;
 import com.cc.talkpojo.dto.PageBookDTO;
 import com.cc.talkpojo.entity.Book;
+import com.cc.talkpojo.entity.BookES;
+import com.cc.talkpojo.entity.Tag;
 import com.cc.talkpojo.vo.BookVO;
 import com.cc.talkserver.admin.mapper.BookAdminMapper;
+import com.cc.talkserver.admin.mapper.BookTagAdminMapper;
+import com.cc.talkserver.admin.mapper.TagAdminMapper;
 import com.cc.talkserver.admin.service.BookAdminService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
-import org.elasticsearch.action.bulk.BulkRequest;
-import org.elasticsearch.action.bulk.BulkResponse;
-import org.elasticsearch.action.delete.DeleteRequest;
-import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.common.xcontent.XContentType;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -45,21 +55,34 @@ import java.util.stream.Collectors;
  * @since 2025-07-14
  */
 @Service
+@Slf4j
 public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> implements BookAdminService {
 
 
     @Resource
     private BookAdminMapper bookAdminMapper;
 
+    @Resource
+    private ElasticsearchClient elasticsearchClient;
 
     @Resource
-    private RestHighLevelClient restHighLevelClient;
+    private TagAdminMapper tagAdminMapper;
+
+
+    @Resource
+    @Qualifier("customStringRedisTemplate")
+    private RedisTemplate<String, String> stringRedisTemplate;
+
+    @Resource
+    @Qualifier("customObjectRedisTemplate")
+    private RedisTemplate<String, Object> objectRedisTemplate;
 
     /**
      * 单本图书上传
      * @param bookDTO
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void bookUpload(BookDTO bookDTO) {
 
         //1. 检查必要参数是否为空
@@ -80,36 +103,24 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
 
 
         //4. 准备写入 Elasticsearch 的对象
-        BookEsDTO bookEs = BookEsDTO.builder()
-                .id(book.getId())
-                .isbn(book.getIsbn())
-                .originalTitle(book.getOriginalTitle())
-                .title(book.getTitle())
-                .description(book.getDescription())
-                .author(book.getAuthor())
-                .authorCountry(book.getAuthorCountry())
-                .publisher(book.getPublisher())
-                .producer(book.getProducer())
-                .translator(book.getAuthor())
-                .publishDate(book.getPublishDate())
-                .price(book.getPrice())
-                .coverUrl(book.getCoverUrl())
-                .categoryId(book.getCategoryId())
-                .coverUrl(book.getCoverUrl())
-                .build();
+        BookES bookES = ConvertUtils.convert(book, BookES.class);
 
-
-        //5. 写入Elasticsearch
         try {
-            IndexRequest request = new IndexRequest(ElasticsearchConstant.ES_BOOK_INDEX)
-                    .id(book.getId().toString())
-                    .source(JSONUtil.toJsonStr(bookEs), XContentType.JSON);
+            //5. 执行写入
+            IndexRequest<BookES> request = IndexRequest.of(i -> i
+                    .index(ElasticsearchConstant.ES_BOOK_INDEX)
+                    .id(bookES.getId().toString())
+                    .document(bookES)
+            );
+            IndexResponse response = elasticsearchClient.index(request);
 
-            restHighLevelClient.index(request, RequestOptions.DEFAULT);
+            log.info("ES写入成功，索引={}，ID={}", response.index(), response.id());
+
         } catch (IOException e) {
-            log.error("ES写入失败", e);
+            log.error("ES写入失败，ID={}，错误信息={}", bookES.getId(), e.getMessage(), e);
             throw new BaseException("写入搜索引擎失败");
         }
+
     }
 
 
@@ -132,11 +143,19 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
         List<String> skippedIsbnList = new ArrayList<>();//重复isbn的图书
         List<String> invalidTitleList = new ArrayList<>();//isbn缺失图书
 
+
+        Set<String> batchIsbnSet = new HashSet<>();
         for (BookDTO bookDTO : bookList) {
 
             //isbn为空处理
             if (bookDTO.getIsbn() == null || StringUtils.isBlank(bookDTO.getIsbn())) {
                 invalidTitleList.add(bookDTO.getTitle() == null ? "(未知图书)" : bookDTO.getTitle());
+                continue;
+            }
+
+            // 批次内重复
+            if (!batchIsbnSet.add(bookDTO.getIsbn())) {
+                skippedIsbnList.add(bookDTO.getIsbn());
                 continue;
             }
 
@@ -162,31 +181,38 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
             // 3.1 存入mysql
             saveBatch(toSaveList);
 
-            // 3.2 构建 BulkRequest 写入 ES
-            BulkRequest bulkRequest = new BulkRequest();
-
-            for (Book book : toSaveList) {
-                // 将 Book 转为 BookEsDTO
-                BookEsDTO bookEs = ConvertUtils.convert(book, BookEsDTO.class);
-
-                IndexRequest indexRequest = new IndexRequest("book_index")
-                        .id(bookEs.getId().toString())
-                        .source(JSONUtil.toJsonStr(bookEs), XContentType.JSON);
-
-                bulkRequest.add(indexRequest);
-            }
-
+            // 3.2 存入ES
             try {
-                BulkResponse bulkResponse = restHighLevelClient.bulk(bulkRequest, RequestOptions.DEFAULT);
-                if (bulkResponse.hasFailures()) {
-                    log.warn("部分图书同步到 ES 失败: " + bulkResponse.buildFailureMessage());
+                BulkRequest.Builder br = new BulkRequest.Builder();
+
+                for (Book book : toSaveList) {
+                    BookES bookES = ConvertUtils.convert(book, BookES.class);
+
+                    br.operations(op -> op
+                            .index(idx -> idx
+                                    .index(ElasticsearchConstant.ES_BOOK_INDEX)   // ES 索引名
+                                    .id(bookES.getId().toString())
+                                    .document(bookES)
+                            )
+                    );
                 }
+
+                BulkResponse result = elasticsearchClient.bulk(br.build());
+
+                if (result.errors()) {
+                    log.warn("部分图书同步到 ES 失败:");
+                    result.items().stream()
+                            .filter(item -> item.error() != null)
+                            .forEach(item -> log.warn("写入失败 -> ID: {}, 原因: {}", item.id(), item.error().reason()));
+                } else {
+                    log.info("成功同步 {} 本图书到 Elasticsearch", toSaveList.size());
+                }
+
             } catch (IOException e) {
-                log.error("批量写入 ES 异常", e);
-                throw new BaseException("部分图书写入 ES 失败");
+                log.error("批量写入 Elasticsearch 异常", e);
+                throw new BaseException(ElasticsearchConstant.ES_WRITE_ERROR);
             }
         }
-
         //4. 返回数据构造
         return new UploadResult(
                 toSaveList.size(),
@@ -203,7 +229,7 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
     @Override
     public PageResult<BookVO> getBookPage(PageBookDTO pageBookDTO) {
         if(pageBookDTO == null || pageBookDTO.getPageNum() == null || pageBookDTO.getPageSize() == null){
-            throw new BaseException("参数有误!");
+            throw new BaseException(BusinessConstant.PARAM_ERROR);
         }
         PageHelper.startPage(pageBookDTO.getPageNum(), pageBookDTO.getPageSize());
 
@@ -235,11 +261,11 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
     @Override
     public BookVO getBookDetail(Long id) {
         if(id == null || id <= 0){
-            throw  new BaseException("参数id有误!");
+            throw  new BaseException(BusinessConstant.PARAM_ERROR);
         }
         Book book = bookAdminMapper.selectById(id);
         if (book == null) {
-            throw new BaseException("图书不存在!");
+            throw new BaseException(BusinessConstant.BOOK_NOTEXIST);
         }
         return ConvertUtils.convert(book, BookVO.class);
     }
@@ -255,12 +281,12 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
     public void updateBookDetail(Long id, BookDTO bookDTO) {
 
         if(id == null || id <= 0 || bookDTO == null ){
-            throw  new BaseException("参数有误!");
+            throw  new BaseException(BusinessConstant.PARAM_ERROR);
         }
         // 检查该图书是否存在
         Book bookInDb = bookAdminMapper.selectById(id);
         if (bookInDb == null) {
-            throw new BaseException("图书不存在，无法更新!");
+            throw new BaseException(BusinessConstant.BOOK_NOTEXIST);
         }
 
         Book book = new Book();
@@ -269,20 +295,24 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
         //  mysql更新
         int rows = bookAdminMapper.updateById(book);
         if (rows == 0) {
-            throw new BaseException("mysql更新失败!");
+            throw new BaseException(BusinessConstant.BOOK_UPDATE_MYSQL_ERROR);
         }
 
         // Elasticsearch更新
-        BookEsDTO bookEs = ConvertUtils.convert(book, BookEsDTO.class);
+        BookES bookES = ConvertUtils.convert(book, BookES.class);
         try {
-            IndexRequest request = new IndexRequest(ElasticsearchConstant.ES_BOOK_INDEX)
-                    .id(book.getId().toString())
-                    .source(JSONUtil.toJsonStr(bookEs), XContentType.JSON);
+            IndexRequest<BookES> indexRequest = IndexRequest.of(
+                    idx -> idx
+                            .index(ElasticsearchConstant.ES_BOOK_INDEX)   // ES 索引名
+                            .id(bookES.getId().toString())
+                            .document(bookES)
+            );
+            IndexResponse response = elasticsearchClient.index(indexRequest);
+            log.info("ES写入成功，索引={}，ID={}", response.index(), response.id());
 
-            restHighLevelClient.index(request, RequestOptions.DEFAULT);
         } catch (IOException e) {
             log.error("ES写入失败", e);
-            throw new BaseException("写入搜索引擎失败");
+            throw new BaseException(ElasticsearchConstant.ES_WRITE_ERROR);
         }
 
     }
@@ -296,22 +326,34 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
         if(id == null || id < 0){
-            throw new BaseException("参数有误!");
+            throw new BaseException(BusinessConstant.PARAM_ERROR);
         }
         //1. mysql 删除
         int num = bookAdminMapper.deleteById(id);
         if (num == 0) {
-            throw new BaseException("数据库中不存在该图书，删除失败");
+            throw new BaseException(BusinessConstant.BOOK_DELETE_MYSQL_ERROR);
         }
 
         //2. Elasticsearch 删除
-        try{
-            DeleteRequest deleteRequest = new DeleteRequest(ElasticsearchConstant.ES_BOOK_INDEX, id.toString());
-            restHighLevelClient.delete(deleteRequest, RequestOptions.DEFAULT);
-        }catch (Exception e){
-            log.error("Es删除失败",e);
-            throw new BaseException("删除搜索引擎数据失败");
+        try {
+            DeleteRequest deleteRequest = DeleteRequest.of(d -> d
+                    .index(ElasticsearchConstant.ES_BOOK_INDEX)
+                    .id(id.toString())
+            );
+
+            DeleteResponse response = elasticsearchClient.delete(deleteRequest);
+
+            if (response.result() == Result.NotFound) {
+                log.warn("ES中未找到要删除的文档，id: {}", id);
+            } else {
+                log.info("ES删除成功，id: {}", id);
+            }
+
+        } catch (Exception e) {
+            log.error("ES删除失败", e);
+            throw new BaseException(BusinessConstant.BOOK_DELETE_ES_ERROR);
         }
+
     }
 
     /**
@@ -320,40 +362,95 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
      */
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public void deleteByIdS(List<Integer> ids) {
+    public void deleteByIdS(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
-            throw new BaseException("列表为空!");
+            throw new BaseException(BusinessConstant.PARAM_ERROR);
         }
 
         // 1. MySQL 删除
         int num = bookAdminMapper.deleteByIds(ids);
         if (num != ids.size()) {
-            throw new BaseException("批量删除失败!");
+            throw new BaseException(BusinessConstant.BOOK_DELETE_MYSQL_ERROR);
         }
 
         // 2. Elasticsearch 批量删除
         try {
-            BulkRequest bulkRequest = new BulkRequest();
-            for (Integer id : ids) {
-                DeleteRequest deleteRequest = new DeleteRequest(ElasticsearchConstant.ES_BOOK_INDEX, id.toString());
-                bulkRequest.add(deleteRequest);
+            BulkRequest.Builder bulkRequestBuilder = new BulkRequest.Builder();
+
+            for (Long id : ids) {
+                bulkRequestBuilder.operations(op -> op
+                        .delete(d -> d
+                                .index(ElasticsearchConstant.ES_BOOK_INDEX)
+                                .id(id.toString())
+                        )
+                );
             }
 
-            BulkResponse bulkResponse = restHighLevelClient.bulk(bulkRequest, RequestOptions.DEFAULT);
+            BulkResponse response = elasticsearchClient.bulk(bulkRequestBuilder.build());
 
-            if (bulkResponse.hasFailures()) {
-                log.error("部分 ES 删除失败："+ bulkResponse.buildFailureMessage());
-                throw new BaseException("部分搜索引擎数据删除失败");
+            if (response.errors()) {
+                log.error("部分 ES 删除失败：");
+                response.items().stream()
+                        .filter(item -> item.error() != null)
+                        .forEach(item -> log.error("失败ID: {}, 原因: {}", item.id(), item.error().reason()));
+
+                throw new BaseException(BusinessConstant.BOOK_DELETE_ES_ERROR);
+            } else {
+                log.info("成功删除 {} 条数据（ES）", ids.size());
             }
 
         } catch (Exception e) {
             log.error("ES 批量删除失败", e);
-            throw new BaseException("搜索引擎批量删除失败");
+            throw new BaseException(BusinessConstant.BOOK_DELETE_ES_ERROR);
         }
+
     }
 
 
+    /**
+     * 热门图书缓存
+     */
+    @Override
+    //TODO 缓存更新逻辑，目前采整表重建的方式，待优化
+    public void refreshHotBooksCache() {
+
+        //1. 获取本月
+        String month = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+
+        //2. 热门标签 ID 查询
+        List<Tag> hotTags = tagAdminMapper.selectHotTagsByUsageCount(RedisCacheConstant.HOT_TAGS_COUNT);
+        List<Long> hotTagIds = hotTags.stream().map(Tag::getId).collect(Collectors.toList());
+
+        for (Long hotTagId : hotTagIds) {
+            //3. 获取热门标签图书列表
+            List<Book> hotBooks = bookAdminMapper.findHotBooksByMonthAndTag(month, hotTagId, RedisCacheConstant.HOT_BOOKS_COUNT);
 
 
+            //4. 缓存热门图书id列表
+            String hotBooksKey = RedisCacheConstant.HOT_BOOKS_KEY_PREFIX + month + ":" + hotTagId;
 
+            if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(hotBooksKey))) {
+                stringRedisTemplate.delete(hotBooksKey);
+            }
+            if (!hotBooks.isEmpty()) {
+                List<String> bookIds = hotBooks.stream()
+                        .map(book -> String.valueOf(book.getId()))
+                        .collect(Collectors.toList());
+                stringRedisTemplate.opsForList().rightPushAll(hotBooksKey, bookIds);
+                stringRedisTemplate.expire(hotBooksKey, RedisCacheConstant.CACHE_EXPIRE_SECONDS, TimeUnit.SECONDS);
+            }
+
+            //5. 热门图书详细信息
+            String hashKey = RedisCacheConstant.BOOK_DETAIL_KEY_PREFIX + hotTagId;
+            objectRedisTemplate.delete(hashKey); // 删除旧hash缓存
+
+            if (!hotBooks.isEmpty()) {
+                for (Book book : hotBooks) {
+                    objectRedisTemplate.opsForHash().put(hashKey, String.valueOf(book.getId()), book);
+                }
+                objectRedisTemplate.expire(hashKey, RedisCacheConstant.CACHE_EXPIRE_SECONDS, TimeUnit.SECONDS);
+            }
+        }
+
+    }
 }

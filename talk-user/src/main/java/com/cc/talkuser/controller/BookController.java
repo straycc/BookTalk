@@ -5,7 +5,9 @@ import com.cc.talkcommon.result.Result;
 import com.cc.talkpojo.Result.PageResult;
 import com.cc.talkpojo.dto.BookShowDTO;
 import com.cc.talkpojo.dto.PageBookDTO;
+import com.cc.talkpojo.dto.PageSearchDTO;
 import com.cc.talkpojo.vo.BookVO;
+import com.cc.talkpojo.vo.CategoryVO;
 import com.cc.talkserver.user.service.BookUserService;
 
 import io.swagger.annotations.Api;
@@ -13,6 +15,7 @@ import io.swagger.annotations.ApiOperation;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import java.util.List;
 
 /**
  * <p>
@@ -23,14 +26,26 @@ import javax.annotation.Resource;
  * @since 2025-06-30
  */
 @RestController
-@RequestMapping("/book")
-@Api("书籍相关接口")
+@RequestMapping("user/book")
+@Api(tags = "书籍相关接口")
 public class BookController {
 
 
     @Resource
     private BookUserService bookUserService;
 
+    /**
+     * 书籍全局搜索
+     * @param pageSearchDTO
+     * @return
+     */
+    @ApiOperation("书籍全局搜索")
+    @PostMapping("/search")
+    public Result<PageResult<BookShowDTO>> bookSearch(@RequestBody PageSearchDTO pageSearchDTO) {
+
+        PageResult<BookShowDTO> pageResult = bookUserService.getSearchPage(pageSearchDTO);
+        return Result.success(pageResult);
+    }
 
 
     /**
@@ -53,71 +68,47 @@ public class BookController {
      */
     @ApiOperation("查询书籍详情")
     @GetMapping("/detail")
-    public Result<BookVO> detail(@RequestParam("id") Integer id) {
+    public Result<BookVO> detail(@RequestParam("id") Long id) {
 
         BookVO bookVo = bookUserService.getBookDetail(id);
         return Result.success(bookVo);
     }
 
+    /**
+     * 获取所有分类信息
+     * @return
+     */
+    @ApiOperation("查询所有分类")
+    @GetMapping("/category/list")
+    public Result<List<CategoryVO>> listCategory() {
+        List<CategoryVO> categoryList = bookUserService.getCategoryList();
+        return Result.success(categoryList);
+    }
 
-//    /**
-//     * 获取所有分类信息
-//     * @return
-//     */
-//    @ApiOperation("查询所有分类")
-//    @GetMapping("/category/list")
-//    public Result<List<CategoryVO>> listCategory() {
-//        List<CategoryVO> categoryList = bookUserService.getCategoryList();
-//        return Result.success(categoryList);
-//    }
-//
-//    /**
-//     * 获取所有标签信息
-//     * @return
-//     */
-//    @ApiOperation("获取所有标签信息")
-//    @GetMapping("/tag/list")
-//    public Result<List<TagVO>> listTag() {
-//        List<TagVO> tagVOList = bookUserService.getTagList();
-//        return Result.success(tagVOList);
-//    }
-//
-//
-//    /**
-//     * 根据标签分页查询书籍
-//     * @param id
-//     * @return
-//     */
-//    @ApiOperation("根据标签分页查询")
-//    @GetMapping("/tag/{id}")
-//    public Result<PageResult<BookVO>> PageByTag(@PathVariable("id") Integer id) {
-//         PageResult<BookVO> pageResult = bookUserService.getPageByTag(id);
-//         return Result.success(pageResult);
-//    }
-//
-//
-//    @ApiOperation("查询热门标签")
-//    @GetMapping("/tag/getHot/{categoryId}")
-//    public Result<List<BookVO>> getHot(@PathVariable Long categoryId) {
-//
-//        List<TagVO> tagVOList = bookUserService.getHotTags(categoryId);
-//        return Result.success();
-//    }
-//
-//
+    /**
+     * 根据标签分页查询书籍
+     * @param id
+     * @return
+     */
+    @ApiOperation("根据标签查询书籍")
+    @GetMapping("/tag/{id}")
+    public Result<PageResult<BookShowDTO>> PageByTag(@PathVariable("id") Integer id, @RequestBody PageBookDTO pageBookDTO) {
+         PageResult<BookShowDTO> pageResult = bookUserService.getPageByTag(id,pageBookDTO);
+         return Result.success(pageResult);
+    }
 
 
+    /**
+     * 热门书籍分页查询
+     * @param pageBookDTO
+     * @return
+     */
+    @ApiOperation("热门书籍查询")
+    @GetMapping("/hootBook")
+    public Result<PageResult<BookShowDTO>> hootBook(@RequestBody PageBookDTO pageBookDTO) {
 
-
-
-
-
-
-
-
-
-
-
-
+        PageResult <BookShowDTO> hotBookPage = bookUserService.getHotBook(pageBookDTO);
+        return Result.success(hotBookPage);
+    }
 
 }

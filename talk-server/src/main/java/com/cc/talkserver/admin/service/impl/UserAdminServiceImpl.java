@@ -7,7 +7,7 @@ import com.cc.talkcommon.exception.BaseException;
 import com.cc.talkcommon.jwt.JwtUtil;
 import com.cc.talkcommon.utils.ConvertUtils;
 import com.cc.talkpojo.Result.PageResult;
-import com.cc.talkpojo.dto.PageUserDTO;
+import com.cc.talkpojo.dto.admin.PageUserDTO;
 import com.cc.talkpojo.dto.UserDTO;
 import com.cc.talkpojo.dto.UserLoginDTO;
 import com.cc.talkpojo.entity.User;

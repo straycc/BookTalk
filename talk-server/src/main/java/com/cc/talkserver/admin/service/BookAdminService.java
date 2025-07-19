@@ -67,6 +67,11 @@ public interface BookAdminService extends IService<Book> {
      * 批量删除图书
      * @param ids
      */
-    void deleteByIdS(List<Integer> ids);
+    void deleteByIdS(List<Long> ids);
 
+
+    /**
+     * 热门书籍缓存
+     */
+    void refreshHotBooksCache();
 }

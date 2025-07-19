@@ -13,49 +13,140 @@ public class BookDTO implements Serializable {
     private static final long serialVersionUID = 1L;
 
 
-    /**图书id*/
+    /**
+     * 图书ID
+     */
     private Long id;
 
-
-    /**ISBN编号*/
+    /**
+     * ISBN编号
+     */
     private String isbn;
 
-    /**图书名*/
+    //  图书核心元数据
+    /**
+     * 书名
+     */
     private String title;
 
-    /**原作名称（外文原名）*/
+    /**
+     * 副标题
+     */
+    private String subTitle;
+
+    /**
+     * 原作名称（外文原名）
+     */
     private String originalTitle;
 
-    /**图书简介*/
+    /**
+     * 图书简介
+     */
     private String description;
 
-    /**图书作者*/
+    //  作者/译者信息
+    /**
+     * 作者
+     */
     private String author;
 
-    /**作者国籍*/
+    /**
+     * 作者国籍
+     */
     private String authorCountry;
 
-    /**图书出社*/
-    private String publisher;
-
-
-    /**出品方*/
-    private String producer;
-
-    /**译者*/
+    /**
+     * 译者
+     */
     private String translator;
 
+    // 出版信息
+    /**
+     * 出版系列
+     */
+    private String series;
 
-    /**出版时间*/
+    /**
+     * 出版社
+     */
+    private String publisher;
+
+    /**
+     * 出品方/品牌方
+     */
+    private String producer;
+
+    /**
+     * 出版时间
+     */
     private LocalDate publishDate;
 
-    /**价格*/
+    /**
+     * 价格
+     */
     private BigDecimal price;
 
-    /**图书封面*/
+    //  物理特征
+    /**
+     * 封面图片URL
+     */
     private String coverUrl;
 
-    /**图书分类*/
+    /**
+     * 页数
+     */
+    private Integer pageCount;
+
+    /**
+     * 装帧类型
+     */
+    private String bindingType;
+
+    //  分类与统计
+    /**
+     * 分类ID（单分类）
+     */
     private Long categoryId;
+
+    /**
+     * 平均评分
+     */
+    private BigDecimal averageScore;
+
+    /**
+     * 五星评价占比
+     */
+    private BigDecimal stars5Top;
+
+    /**
+     * 四星评价占比
+     */
+    private BigDecimal stars4Top;
+
+    /**
+     * 三星评价占比
+     */
+    private BigDecimal stars3Top;
+
+    /**
+     * 二星评价占比
+     */
+    private BigDecimal stars2Top;
+
+    /**
+     * 一星评价占比
+     */
+    private BigDecimal stars1Top;
+
+
+    /**
+     * 评分人数
+     */
+    private Integer scoreCount;
+
+    /**
+     * 收藏人数
+     */
+    private Integer favoriteCount;
 
 }

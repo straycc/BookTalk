@@ -2,4 +2,10 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.cc.talkserver.admin.mapper.TagAdminMapper">
 
+    <select id="selectHotTagsByUsageCount" resultType="com.cc.talkpojo.entity.Tag">
+    select *
+    from tag
+    order by usage_count desc
+    limit #{limit}
+    </select>
 </mapper>

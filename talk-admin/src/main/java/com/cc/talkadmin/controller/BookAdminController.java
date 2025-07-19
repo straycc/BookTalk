@@ -124,7 +124,7 @@ public class BookAdminController {
      */
     @ApiOperation("图书批量删除")
     @DeleteMapping("/deleteBatch")
-    public Result<Object> bookDeleteBatch(@RequestBody List<Integer> ids) {
+    public Result<Object> bookDeleteBatch(@RequestBody List<Long> ids) {
         log.info("图书批量删除...");
         bookService.deleteByIdS(ids);
         return Result.success();

@@ -31,10 +31,10 @@
         <lombok.version>1.18.36</lombok.version>
         <hutool.version>5.8.21</hutool.version>
         <aliyun-oss.version>3.17.2</aliyun-oss.version>
-        <elasticsearch.version>7.15.2</elasticsearch.version>
         <knife4j.version>3.0.3</knife4j.version>
         <slf4j.version>1.7.36</slf4j.version>
         <pagehelper.version>1.4.2</pagehelper.version>
+        <jackson.version>2.13.3</jackson.version>
     </properties>
 
     <dependencyManagement>
@@ -62,6 +62,7 @@
                 <version>${mysql.version}</version>
             </dependency>
 
+            <!--pagehelper-->
             <dependency>
                 <groupId>com.github.pagehelper</groupId>
                 <artifactId>pagehelper-spring-boot-starter</artifactId>
@@ -71,7 +72,17 @@
                         <groupId>org.mybatis</groupId>
                         <artifactId>mybatis</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>com.github.jsqlparser</groupId>
+                        <artifactId>jsqlparser</artifactId>
+                    </exclusion>
                 </exclusions>
+            </dependency>
+            <!--jsqlparser-->
+            <dependency>
+                <groupId>com.github.jsqlparser</groupId>
+                <artifactId>jsqlparser</artifactId>
+                <version>4.6</version>
             </dependency>
 
             <dependency>
@@ -101,16 +112,27 @@
             </dependency>
 
             <!-- 搜索引擎 -->
+            <!-- ES Java 高级客户端 -->
+            <dependency>
+                <groupId>co.elastic.clients</groupId>
+                <artifactId>elasticsearch-java</artifactId>
+                <version>8.13.0</version>
+            </dependency>
+
+            <!-- ES 低级 Rest 客户端，版本要和上面一致 -->
             <dependency>
                 <groupId>org.elasticsearch.client</groupId>
-                <artifactId>elasticsearch-rest-high-level-client</artifactId>
-                <version>${elasticsearch.version}</version>
+                <artifactId>elasticsearch-rest-client</artifactId>
+                <version>8.13.0</version>
             </dependency>
+
+            <!-- Jakarta JSON API 规范 -->
             <dependency>
-                <groupId>org.elasticsearch</groupId>
-                <artifactId>elasticsearch</artifactId>
-                <version>${elasticsearch.version}</version>
+                <groupId>jakarta.json</groupId>
+                <artifactId>jakarta.json-api</artifactId>
+                <version>2.1.1</version>
             </dependency>
+
 
             <!-- 文档工具 -->
             <dependency>
@@ -131,6 +153,13 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-validation</artifactId>
                 <version>${spring-boot.version}</version>
+            </dependency>
+
+            <!--jackson-->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

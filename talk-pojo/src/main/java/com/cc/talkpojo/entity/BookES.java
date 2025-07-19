@@ -1,24 +1,19 @@
-package com.cc.talkpojo.vo;
+package com.cc.talkpojo.entity;
 
-
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Data
-public class BookVO implements Serializable {
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class BookES {
 
-    private static final long serialVersionUID = 1L;
-
-    //  基础标识信息
-    /**
-     * 图书ID
-     */
     private Long id;
 
     /**
@@ -26,7 +21,6 @@ public class BookVO implements Serializable {
      */
     private String isbn;
 
-    //  图书核心元数据
     /**
      * 书名
      */
@@ -47,7 +41,6 @@ public class BookVO implements Serializable {
      */
     private String description;
 
-    //  作者/译者信息
     /**
      * 作者
      */
@@ -89,28 +82,19 @@ public class BookVO implements Serializable {
      */
     private BigDecimal price;
 
-    //  物理特征
     /**
      * 封面图片URL
      */
     private String coverUrl;
 
     /**
-     * 页数
-     */
-    private Integer pageCount;
-
-    /**
-     * 装帧类型
-     */
-    private String bindingType;
-
-    //  分类与统计
-    /**
      * 分类ID（单分类）
      */
     private Long categoryId;
 
+    /**
+     * 分类名称
+     */
     private String categoryName;
 
     /**
@@ -119,38 +103,8 @@ public class BookVO implements Serializable {
     private BigDecimal averageScore;
 
     /**
-     * 五星评价占比
-     */
-    private BigDecimal stars5Top;
-
-    /**
-     * 四星评价占比
-     */
-    private BigDecimal stars4Top;
-
-    /**
-     * 三星评价占比
-     */
-    private BigDecimal stars3Top;
-
-    /**
-     * 二星评价占比
-     */
-    private BigDecimal stars2Top;
-
-    /**
-     * 一星评价占比
-     */
-    private BigDecimal stars1Top;
-
-
-    /**
      * 评分人数
      */
     private Integer scoreCount;
 
-    /**
-     * 收藏人数
-     */
-    private Integer favoriteCount;
 }
