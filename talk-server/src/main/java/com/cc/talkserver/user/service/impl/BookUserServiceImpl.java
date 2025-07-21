@@ -1,5 +1,8 @@
 package com.cc.talkserver.user.service.impl;
 
+import cn.hutool.core.lang.TypeReference;
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
@@ -10,7 +13,7 @@ import com.cc.talkcommon.constant.BusinessConstant;
 import com.cc.talkcommon.constant.ElasticsearchConstant;
 import com.cc.talkcommon.constant.RedisCacheConstant;
 import com.cc.talkcommon.exception.BaseException;
-import com.cc.talkcommon.result.Result;
+import com.cc.talkcommon.redis.RedisData;
 import com.cc.talkcommon.utils.BuildQueryWrapper;
 import com.cc.talkcommon.utils.CheckPageParam;
 import com.cc.talkcommon.utils.ConvertUtils;
@@ -30,20 +33,21 @@ import com.cc.talkserver.user.mapper.CategoryUserMapper;
 import com.cc.talkserver.user.service.BookUserService;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
-
 import com.github.pagehelper.PageInfo;
-import lombok.NonNull;
-import org.apache.coyote.Response;
+import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import javax.naming.directory.SearchResult;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -55,6 +59,7 @@ import java.util.stream.Collectors;
  * @since 2025-06-30
  */
 @Service
+@Slf4j
 public class BookUserServiceImpl extends ServiceImpl<BookUserMapper, Book> implements BookUserService {
 
     @Resource
@@ -69,14 +74,14 @@ public class BookUserServiceImpl extends ServiceImpl<BookUserMapper, Book> imple
     @Resource
     private ElasticsearchClient elasticsearchClient;
 
+    @Resource
+    private RedissonClient redissonClient;
 
     @Resource
-    @Qualifier("customStringRedisTemplate")
-    private RedisTemplate<String, String> stringRedisTemplate;
+    private RedisTemplate<String, String> customStringRedisTemplate;
 
     @Resource
-    @Qualifier("customObjectRedisTemplate")
-    private RedisTemplate<String, Object> objectRedisTemplate;
+    private RedisTemplate<String, Object> customObjectRedisTemplate;
 
 
     /**
@@ -169,17 +174,107 @@ public class BookUserServiceImpl extends ServiceImpl<BookUserMapper, Book> imple
         if (id == null || id <= 0) {
             throw new BaseException(BusinessConstant.PARAM_ERROR);
         }
+
+        String hashKey = RedisCacheConstant.BOOK_DETAIL_KEY_PREFIX;
+        String fieldKey = String.valueOf(id);
+
+        Object bookObj = customObjectRedisTemplate.opsForHash().get(hashKey, fieldKey);
+
+        // 1. 命中缓存
+        if (bookObj != null) {
+            String json = bookObj.toString();
+            if (StrUtil.isNotBlank(json)) {
+                RedisData<BookVO> redisData = JSONUtil.toBean(json, new TypeReference<RedisData<BookVO>>() {}, false);
+                LocalDateTime expireTime = redisData.getExpireTime();
+                BookVO bookVO = redisData.getData();
+
+                // 1.1 缓存未过期，直接返回
+                if (expireTime != null && expireTime.isAfter(LocalDateTime.now())) {
+                    return bookVO;
+                }
+
+                // 1.2 缓存已过期，尝试重建缓存（逻辑过期 + 分布式锁 + 双检缓存）
+                String lockKey = RedisCacheConstant.REDISSION_BOOKDETAIL_LOCK_PREFIX + fieldKey;
+                RLock lock = redissonClient.getLock(lockKey);
+                boolean locked = false;
+
+                try {
+                    locked = lock.tryLock(0, 10, TimeUnit.SECONDS);
+                    if (locked) {
+                        // 再次确认缓存是否已被其他线程重建
+                        Object doubleCheck = customObjectRedisTemplate.opsForHash().get(hashKey, fieldKey);
+                        if (doubleCheck != null && StrUtil.isNotBlank(doubleCheck.toString())) {
+                            RedisData<BookVO> freshCache = JSONUtil.toBean(doubleCheck.toString(), new TypeReference<RedisData<BookVO>>() {}, false);
+                            if (freshCache.getExpireTime() != null && freshCache.getExpireTime().isAfter(LocalDateTime.now())) {
+                                return freshCache.getData();
+                            }
+                        }
+
+                        // 缓存未重建 → 查数据库 + 写缓存
+                        Book book = bookUserMapper.selectById(id);
+                        if (book == null) {
+                            // 写入空值，防止击穿
+                            customObjectRedisTemplate.opsForHash().put(hashKey, fieldKey, "");
+                            customObjectRedisTemplate.expire(hashKey, Duration.ofMinutes(10));
+                            throw new BaseException(BusinessConstant.BOOK_NOTEXIST);
+                        }
+
+                        BookVO freshVO = ConvertUtils.convert(book, BookVO.class);
+                        fillCategoryName(freshVO);
+
+                        RedisData<BookVO> freshData = new RedisData<>();
+                        freshData.setData(freshVO);
+                        freshData.setExpireTime(LocalDateTime.now().plusDays(BusinessConstant.BOOK_CACAHE_EXPIRETIME));
+
+                        customObjectRedisTemplate.opsForHash().put(hashKey, fieldKey, JSONUtil.toJsonStr(freshData));
+                        return freshVO;
+                    } else {
+                        // 未获取到锁 → 返回旧数据
+                        return bookVO;
+                    }
+                } catch (InterruptedException e) {
+                    log.error("获取分布式锁失败: {}", e.getMessage());
+                    throw new BaseException(BusinessConstant.TRYLOCK_ERROR);
+                } finally {
+                    if (locked) lock.unlock();
+                }
+            } else {
+                // 空值缓存 → 数据库中也没有
+                throw new BaseException(BusinessConstant.BOOK_NOTEXIST);
+            }
+        }
+
+        // 2. 缓存未命中 → 查数据库
         Book book = bookUserMapper.selectById(id);
         if (book == null) {
+            // 缓存空值，防击穿
+            customObjectRedisTemplate.opsForHash().put(hashKey, fieldKey, "");
+            customObjectRedisTemplate.expire(hashKey, Duration.ofMinutes(10));
             throw new BaseException(BusinessConstant.BOOK_NOTEXIST);
         }
+
         BookVO bookVO = ConvertUtils.convert(book, BookVO.class);
-        //查询所属分类
-        BookCategory bookCategory = categoryUserMapper.selectById(book.getCategoryId());
-        if(bookCategory != null){
+        fillCategoryName(bookVO);
+
+        RedisData<BookVO> redisData = new RedisData<>();
+        redisData.setData(bookVO);
+        redisData.setExpireTime(LocalDateTime.now().plusDays(BusinessConstant.BOOK_CACAHE_EXPIRETIME));
+
+        customObjectRedisTemplate.opsForHash().put(hashKey, fieldKey, JSONUtil.toJsonStr(redisData));
+        return bookVO;
+    }
+
+
+
+    /**
+     * 填充分类名
+     * @param bookVO
+     */
+    private void fillCategoryName(BookVO bookVO) {
+        BookCategory bookCategory = categoryUserMapper.selectById(bookVO.getId());
+        if (bookCategory != null) {
             bookVO.setCategoryName(bookCategory.getName());
         }
-        return bookVO;
     }
 
 
@@ -258,14 +353,14 @@ public class BookUserServiceImpl extends ServiceImpl<BookUserMapper, Book> imple
         String detailKey = RedisCacheConstant.BOOK_DETAIL_KEY_PREFIX + tagId; //BookDetail哈希表
 
         //4. Redis 获取图书 ID 列表
-        List<String> bookIdList = stringRedisTemplate.opsForList().range(listKey,start,end);
+        List<String> bookIdList = customStringRedisTemplate.opsForList().range(listKey,start,end);
         if (bookIdList == null || bookIdList.isEmpty()) {
             return new PageResult<>(0L, Collections.emptyList());
         }
         //5. 根据BookId 获取图书详情
         List<BookShowDTO> bookShowDTOS = bookIdList.stream().map(
                 bookId -> {
-                    Object bookObj = objectRedisTemplate.opsForHash().get(detailKey,bookId);
+                    Object bookObj = customObjectRedisTemplate.opsForHash().get(detailKey,bookId);
                     if(bookObj != null){
                         return ConvertUtils.convert(bookObj,BookShowDTO.class);
                     }
@@ -275,7 +370,7 @@ public class BookUserServiceImpl extends ServiceImpl<BookUserMapper, Book> imple
 
         //6. 返回分页结果
         long total = Optional.ofNullable(// 防止返回null，触发空指针异常
-                stringRedisTemplate.opsForList().size(listKey)
+                customStringRedisTemplate.opsForList().size(listKey)
         ).orElse(0L);
         return new PageResult<>(total, bookShowDTOS);
 

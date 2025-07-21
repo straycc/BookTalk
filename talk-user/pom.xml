@@ -78,6 +78,12 @@
             <version>8.13.0</version>
         </dependency>
 
+        <!--Redisson-->
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson</artifactId>
+        </dependency>
+
     </dependencies>
     <dependencyManagement>
         <dependencies>

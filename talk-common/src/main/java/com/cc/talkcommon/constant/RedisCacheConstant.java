@@ -4,6 +4,7 @@ import jdk.dynalink.beans.StaticClass;
 
 public class RedisCacheConstant {
 
+    public static final String REDISSION_BOOKDETAIL_LOCK_PREFIX = "lock:bookDetail:";
 
     public static final Integer HOT_BOOKS_COUNT = 100;
     public static final Integer HOT_TAGS_COUNT = 10;
@@ -12,8 +13,8 @@ public class RedisCacheConstant {
 
 
 
-    public static final String HOT_BOOKS_KEY_PREFIX = "monthly_hot_books:";
-    public static final String BOOK_DETAIL_KEY_PREFIX = "book:";
+    public static final String HOT_BOOKS_KEY_PREFIX = "book:hot:";
+    public static final String BOOK_DETAIL_KEY_PREFIX = "book:detail";
 
 
 

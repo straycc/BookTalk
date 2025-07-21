@@ -10,6 +10,7 @@ import com.cc.talkcommon.constant.BusinessConstant;
 import com.cc.talkcommon.constant.ElasticsearchConstant;
 import com.cc.talkcommon.constant.RedisCacheConstant;
 import com.cc.talkcommon.exception.BaseException;
+import com.cc.talkcommon.redis.RedisData;
 import com.cc.talkcommon.utils.BuildQueryWrapper;
 import com.cc.talkcommon.utils.ConvertUtils;
 import com.cc.talkpojo.Result.PageResult;
@@ -17,11 +18,13 @@ import com.cc.talkpojo.Result.UploadResult;
 import com.cc.talkpojo.dto.BookDTO;
 import com.cc.talkpojo.dto.PageBookDTO;
 import com.cc.talkpojo.entity.Book;
+import com.cc.talkpojo.entity.BookCategory;
 import com.cc.talkpojo.entity.BookES;
 import com.cc.talkpojo.entity.Tag;
 import com.cc.talkpojo.vo.BookVO;
 import com.cc.talkserver.admin.mapper.BookAdminMapper;
 import com.cc.talkserver.admin.mapper.BookTagAdminMapper;
+import com.cc.talkserver.admin.mapper.CategoryAdminMapper;
 import com.cc.talkserver.admin.mapper.TagAdminMapper;
 import com.cc.talkserver.admin.service.BookAdminService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -30,6 +33,7 @@ import com.github.pagehelper.PageHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,14 +72,14 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
     @Resource
     private TagAdminMapper tagAdminMapper;
 
+    @Resource
+    private CategoryAdminMapper categoryAdminMapper;
 
     @Resource
-    @Qualifier("customStringRedisTemplate")
-    private RedisTemplate<String, String> stringRedisTemplate;
+    private RedisTemplate<String, String> customStringRedisTemplate;
 
     @Resource
-    @Qualifier("customObjectRedisTemplate")
-    private RedisTemplate<String, Object> objectRedisTemplate;
+    private RedisTemplate<String, Object> customObjectRedisTemplate;
 
     /**
      * 单本图书上传
@@ -250,11 +254,10 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
 
         // 5. 封装 PageResult
         return new PageResult<>(pageInfo.getTotal(), voList);
-
     }
 
     /**
-     * 查询书记详细信息
+     * 查询图书详细信息
      * @param id
      * @return
      */
@@ -272,7 +275,7 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
 
 
     /**
-     * 图书信息编辑
+     * 图书信息更新
      * @param id
      * @param bookDTO
      */
@@ -297,6 +300,10 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
         if (rows == 0) {
             throw new BaseException(BusinessConstant.BOOK_UPDATE_MYSQL_ERROR);
         }
+        // 删除Redis缓存
+        String hashKey = RedisCacheConstant.BOOK_DETAIL_KEY_PREFIX;
+        String fieldKey = String.valueOf(id);
+        customObjectRedisTemplate.opsForHash().delete(hashKey,fieldKey);
 
         // Elasticsearch更新
         BookES bookES = ConvertUtils.convert(book, BookES.class);
@@ -308,7 +315,7 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
                             .document(bookES)
             );
             IndexResponse response = elasticsearchClient.index(indexRequest);
-            log.info("ES写入成功，索引={}，ID={}", response.index(), response.id());
+            log.info("ES更新成功，索引={}，ID={}", response.index(), response.id());
 
         } catch (IOException e) {
             log.error("ES写入失败", e);
@@ -319,7 +326,7 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
 
 
     /**
-     * 删除单本图书
+     * 删除单本图书(对于热点缓存里的BookId,采用“定期刷新缓存”和“读时校验”的策略)
      * @param id
      */
     @Override
@@ -334,7 +341,12 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
             throw new BaseException(BusinessConstant.BOOK_DELETE_MYSQL_ERROR);
         }
 
-        //2. Elasticsearch 删除
+        //2. redis缓存删除
+        String hashKey = RedisCacheConstant.BOOK_DETAIL_KEY_PREFIX;
+        String filedKey = String.valueOf(id);
+        customObjectRedisTemplate.opsForHash().delete(hashKey, filedKey);
+
+        //3. Elasticsearch 删除
         try {
             DeleteRequest deleteRequest = DeleteRequest.of(d -> d
                     .index(ElasticsearchConstant.ES_BOOK_INDEX)
@@ -373,7 +385,22 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
             throw new BaseException(BusinessConstant.BOOK_DELETE_MYSQL_ERROR);
         }
 
-        // 2. Elasticsearch 批量删除
+        // 2. redis 删除
+        try {
+            // 2.1 删除详情缓存（假设是hash结构，key为BOOK_DETAIL_KEY_PREFIX）
+            String hashKey = RedisCacheConstant.BOOK_DETAIL_KEY_PREFIX;
+            List<String> idStrs = ids.stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.toList());
+
+            // 批量从hash中删除字段
+            customObjectRedisTemplate.opsForHash().delete(hashKey, idStrs.toArray());
+
+        } catch (Exception e) {
+            log.error("Redis 删除缓存异常", e);
+        }
+
+        // 3. Elasticsearch 批量删除
         try {
             BulkRequest.Builder bulkRequestBuilder = new BulkRequest.Builder();
 
@@ -408,49 +435,74 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
 
 
     /**
-     * 热门图书缓存
+     * 热门图书缓存(采用逻辑过期）
      */
     @Override
-    //TODO 缓存更新逻辑，目前采整表重建的方式，待优化
     public void refreshHotBooksCache() {
+        // 当前月份 + 热点tag
+        String curMonth = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        List<Long> hotTagIds = tagAdminMapper
+                .selectHotTagsByUsageCount(RedisCacheConstant.HOT_TAGS_COUNT)
+                .stream()
+                .map(Tag::getId)
+                .collect(Collectors.toList());
 
-        //1. 获取本月
-        String month = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        // Redis pipeline
+        customStringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            // 缓存热点tag对应的bookId列表
+            for (Long tagId : hotTagIds) {
 
-        //2. 热门标签 ID 查询
-        List<Tag> hotTags = tagAdminMapper.selectHotTagsByUsageCount(RedisCacheConstant.HOT_TAGS_COUNT);
-        List<Long> hotTagIds = hotTags.stream().map(Tag::getId).collect(Collectors.toList());
+                String listKey = RedisCacheConstant.HOT_BOOKS_KEY_PREFIX + tagId + ":" + curMonth;
 
-        for (Long hotTagId : hotTagIds) {
-            //3. 获取热门标签图书列表
-            List<Book> hotBooks = bookAdminMapper.findHotBooksByMonthAndTag(month, hotTagId, RedisCacheConstant.HOT_BOOKS_COUNT);
+                // 1. 先删旧 key
+                connection.keyCommands().del(listKey.getBytes());
 
+                // 2. 查询 MySQL
+                List<Book> hotBooks = bookAdminMapper
+                        .findHotBooksByMonthAndTag(curMonth, tagId, RedisCacheConstant.HOT_BOOKS_COUNT);
 
-            //4. 缓存热门图书id列表
-            String hotBooksKey = RedisCacheConstant.HOT_BOOKS_KEY_PREFIX + month + ":" + hotTagId;
+                if (!hotBooks.isEmpty()) {
+                    // push bookId 列表
+                    byte[][] BookIds = hotBooks.stream()
+                            .map(b -> String.valueOf(b.getId()).getBytes())
+                            .toArray(byte[][]::new);
 
-            if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(hotBooksKey))) {
-                stringRedisTemplate.delete(hotBooksKey);
-            }
-            if (!hotBooks.isEmpty()) {
-                List<String> bookIds = hotBooks.stream()
-                        .map(book -> String.valueOf(book.getId()))
-                        .collect(Collectors.toList());
-                stringRedisTemplate.opsForList().rightPushAll(hotBooksKey, bookIds);
-                stringRedisTemplate.expire(hotBooksKey, RedisCacheConstant.CACHE_EXPIRE_SECONDS, TimeUnit.SECONDS);
-            }
+                    connection.listCommands().rPush(listKey.getBytes(), BookIds);
 
-            //5. 热门图书详细信息
-            String hashKey = RedisCacheConstant.BOOK_DETAIL_KEY_PREFIX + hotTagId;
-            objectRedisTemplate.delete(hashKey); // 删除旧hash缓存
+                    // 过期时间 —— 这里示例用固定值
+                    connection.keyCommands().expire(
+                            listKey.getBytes(),
+                            RedisCacheConstant.CACHE_EXPIRE_SECONDS
+                    );
 
-            if (!hotBooks.isEmpty()) {
-                for (Book book : hotBooks) {
-                    objectRedisTemplate.opsForHash().put(hashKey, String.valueOf(book.getId()), book);
+                    String hashKey = RedisCacheConstant.BOOK_DETAIL_KEY_PREFIX;
+                    LocalDateTime logicalExpireTime = LocalDateTime.now().plusDays(BusinessConstant.BOOK_CACAHE_EXPIRETIME);  // 设置逻辑过期时间
+                    for (Book book : hotBooks) {
+                        BookVO bookVO = ConvertUtils.convert(book, BookVO.class);
+                        fillCategoryName(bookVO);
+                        RedisData<BookVO> bookVORedisData = new RedisData<BookVO>(bookVO, logicalExpireTime);
+                        connection.hashCommands().hSet(
+                            hashKey.getBytes(),
+                            String.valueOf(bookVO.getId()).getBytes(),
+                            JSONUtil.toJsonStr(bookVORedisData).getBytes()
+                        );
+                    }
+
                 }
-                objectRedisTemplate.expire(hashKey, RedisCacheConstant.CACHE_EXPIRE_SECONDS, TimeUnit.SECONDS);
             }
-        }
+            return null;
+        });//executePipelined
 
+    }
+
+    /**
+     * 填充分类名称
+     * @param bookVO
+     */
+    private void fillCategoryName(BookVO bookVO) {
+        BookCategory bookCategory = categoryAdminMapper.selectById(bookVO.getCategoryId());
+        if(bookCategory != null){
+            bookVO.setCategoryName(bookCategory.getName());
+        }
     }
 }

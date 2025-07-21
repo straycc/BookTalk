@@ -1,0 +1,12 @@
+singleServerConfig:
+  address: "redis://192.168.72.128:6379"
+  database: 6
+  connectionMinimumIdleSize: 5
+  connectionPoolSize: 10
+  idleConnectionTimeout: 10000
+  connectTimeout: 10000
+  timeout: 3000
+  retryAttempts: 3
+  retryInterval: 1500
+threads: 4
+nettyThreads: 4

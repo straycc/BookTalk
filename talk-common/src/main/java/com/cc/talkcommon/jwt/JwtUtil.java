@@ -20,8 +20,8 @@ public class JwtUtil {
         payload.put("username", userDTO.getUsername());
         payload.put("status", userDTO.getStatus());
 
-        // 2小时后过期，放入秒级时间戳
-        Date expireDate = DateUtil.offsetHour(new Date(), 2);
+        // xx小时后过期，放入秒级时间戳
+        Date expireDate = DateUtil.offsetHour(new Date(), 24);
         long expireTimestamp = expireDate.getTime() / 1000;
         payload.put("expire", expireTimestamp);
 

@@ -21,4 +21,11 @@ public class BusinessConstant {
     public static final String BOOK_DELETE_ES_ERROR = "删除Elasticsearch书籍失败";
     public static final String BOOK_SEARCH_ERROR = "图书搜索失败";
 
+
+    //缓存相关
+    public static final String TRYLOCK_ERROR = "获取分布式锁失败";
+
+    public static final Integer BOOK_CACAHE_EXPIRETIME = 7;
+
+
 }

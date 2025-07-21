@@ -13,8 +13,8 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 public class RedisConfiguration {
 
     // 用于缓存字符串（如热门图书 ID 列表）
-    @Bean("customStringRedisTemplate")
-    public RedisTemplate<String, String> stringRedisTemplate(RedisConnectionFactory factory) {
+    @Bean
+    public RedisTemplate<String, String> customStringRedisTemplate(RedisConnectionFactory factory) {
         log.info("创建 stringRedisTemplate");
         RedisTemplate<String, String> template = new RedisTemplate<>();
         template.setConnectionFactory(factory);
@@ -30,8 +30,8 @@ public class RedisConfiguration {
     }
 
     // 用于缓存对象（如 Book 对象）
-    @Bean("customObjectRedisTemplate")
-    public RedisTemplate<String, Object> objectRedisTemplate(RedisConnectionFactory factory) {
+    @Bean
+    public RedisTemplate<String, Object> customObjectRedisTemplate(RedisConnectionFactory factory) {
         log.info("创建 objectRedisTemplate");
 
         // 建模板实例，并接入 SpringBoot 自动配置好的连接工厂
