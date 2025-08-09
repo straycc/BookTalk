@@ -26,8 +26,13 @@ public class Tag implements Serializable {
     /**
      * 标签ID
      */
-    @TableId(value = "id", type = IdType.AUTO)
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
+
+    /**
+     * 标签创建者id
+     */
+    private Long creatorId;
 
     /**
      * 分类

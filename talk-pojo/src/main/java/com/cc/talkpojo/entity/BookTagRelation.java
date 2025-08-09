@@ -17,12 +17,12 @@ import java.io.Serializable;
  * </p>
  *
  * @author cc
- * @since 2025-07-09
+ * @since 2025-08-09
  */
+@TableName("book_tag_relation")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@TableName("book_tag_relation")
 public class BookTagRelation implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -36,25 +36,21 @@ public class BookTagRelation implements Serializable {
     /**
      * 图书ID
      */
-
     private Long bookId;
 
     /**
      * 标签ID
      */
-
     private Long tagId;
 
     /**
      * 创建时间
      */
-
     private LocalDateTime createTime;
 
     /**
      * 修改时间
      */
     private LocalDateTime updateTime;
-
 
 }

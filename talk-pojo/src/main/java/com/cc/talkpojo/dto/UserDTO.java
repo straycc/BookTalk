@@ -48,5 +48,9 @@ public class UserDTO implements Serializable {
     private Integer status;
 
 
+    /**
+     * 用户角色（“user”/"admin"）
+     */
+    private String role;
 }
 

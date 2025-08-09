@@ -12,6 +12,7 @@ import com.cc.talkserver.user.service.BookUserService;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -28,6 +29,7 @@ import java.util.List;
 @RestController
 @RequestMapping("user/book")
 @Api(tags = "书籍相关接口")
+@Slf4j
 public class BookController {
 
 
@@ -67,12 +69,13 @@ public class BookController {
      * @return
      */
     @ApiOperation("查询书籍详情")
-    @GetMapping("/detail")
-    public Result<BookVO> detail(@RequestParam("id") Long id) {
-
+    @GetMapping("/detail/{id}")
+    public Result<BookVO> detail(@PathVariable Long id) {
+        log.info("查询bookId:{},书籍详情",id);
         BookVO bookVo = bookUserService.getBookDetail(id);
         return Result.success(bookVo);
     }
+
 
     /**
      * 获取所有分类信息
@@ -84,6 +87,10 @@ public class BookController {
         List<CategoryVO> categoryList = bookUserService.getCategoryList();
         return Result.success(categoryList);
     }
+
+
+
+
 
     /**
      * 根据标签分页查询书籍

@@ -2,4 +2,13 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.cc.talkserver.user.mapper.CategoryUserMapper">
 
+
+    <select id="getCategoryNames" parameterType="java.util.List" resultType="java.util.Map">
+        select id,name
+        from book_category
+        where id in
+        <foreach collection="categoryIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
 </mapper>

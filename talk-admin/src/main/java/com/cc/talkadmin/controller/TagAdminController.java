@@ -5,8 +5,8 @@ import com.cc.talkcommon.result.Result;
 import com.cc.talkcommon.utils.ConvertUtils;
 import com.cc.talkpojo.Result.PageResult;
 import com.cc.talkpojo.Result.TagUpResult;
-import com.cc.talkpojo.dto.BookTagDTO;
 import com.cc.talkpojo.dto.PageTagDTO;
+import com.cc.talkpojo.dto.TagDTO;
 import com.cc.talkpojo.vo.TagVO;
 import com.cc.talkserver.admin.service.TagAdminService;
 import io.swagger.annotations.Api;
@@ -54,7 +54,7 @@ public class TagAdminController {
      */
     @ApiOperation("新增单个标签")
     @PostMapping("/singleAdd")
-    public Result<Void> tagSignalAdd(@RequestBody BookTagDTO bookTagDTO) {
+    public Result<Void> tagSignalAdd(@RequestBody TagDTO bookTagDTO) {
         tagAdminService.tagSignalAdd(bookTagDTO);
         return Result.success();
     }
@@ -67,7 +67,7 @@ public class TagAdminController {
      */
     @ApiOperation("批量新增标签")
     @PostMapping("/batchAdd")
-    public Result<TagUpResult> tagsBatchAdd(@RequestBody List<BookTagDTO> bookTagsList) {
+    public Result<TagUpResult> tagsBatchAdd(@RequestBody List<TagDTO> bookTagsList) {
         TagUpResult tagUpResult =  tagAdminService.tagsBatchAdd(bookTagsList);
         return Result.success(tagUpResult);
     }
@@ -93,7 +93,7 @@ public class TagAdminController {
      */
     @ApiOperation("修改标签")
     @PostMapping("/tagRevise/{id}")
-    public Result<Void> tagRevise(@PathVariable Long id, @RequestBody BookTagDTO bookTagDTO){
+    public Result<Void> tagRevise(@PathVariable Long id, @RequestBody TagDTO bookTagDTO){
         tagAdminService.tagRevise(id,bookTagDTO);
         return Result.success();
     }

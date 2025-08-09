@@ -103,10 +103,12 @@ CREATE TABLE book_list_item (
 
 #标签表
 CREATE TABLE tag (
-                          id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '标签ID',
+
+                          id BIGINT PRIMARY KEY not null COMMENT '标签ID',
                           category_id BIGINT DEFAULT NULL COMMENT '分类ID',
                           name VARCHAR(50) NOT NULL UNIQUE COMMENT '标签名称',
                           usage_count BIGINT default 0 not null comment '标签使用次数',
+                          creator_id BIGINT NOT NULL comment '标签创建者id',
                           description TEXT COMMENT '标签描述',
                           create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                           update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'

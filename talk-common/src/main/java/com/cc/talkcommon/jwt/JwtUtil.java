@@ -19,6 +19,7 @@ public class JwtUtil {
         payload.put("userId", userDTO.getId());
         payload.put("username", userDTO.getUsername());
         payload.put("status", userDTO.getStatus());
+        payload.put("role", userDTO.getRole());
 
         // xx小时后过期，放入秒级时间戳
         Date expireDate = DateUtil.offsetHour(new Date(), 24);
@@ -59,6 +60,7 @@ public class JwtUtil {
         Long userId = Long.valueOf(jwt.getPayload("userId").toString());
         String username = jwt.getPayload("username").toString();
         int status = Integer.parseInt(jwt.getPayload("status").toString());
+        String role = jwt.getPayload("role").toString();
         if (status != 1) {
             throw new BaseException("账号已被禁用，请联系管理员");
         }
@@ -66,6 +68,7 @@ public class JwtUtil {
                 .id(userId)
                 .username(username)
                 .status(status)
+                .role(role)
                 .build();
     }
 }

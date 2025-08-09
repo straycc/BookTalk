@@ -13,10 +13,14 @@ public class TagVO {
     private Long id;
 
     /**
+     * 标签创建者id
+     */
+    private Long creatorId;
+
+    /**
      * 分类ID
      */
     private Long categoryId;
-
 
     /**
      * 分类名称
@@ -33,6 +37,11 @@ public class TagVO {
      * 标签描述
      */
     private String description;
+
+    /**
+     * 标签使用次数
+     */
+    private Long usageCount;
 
     /**
      * 创建时间

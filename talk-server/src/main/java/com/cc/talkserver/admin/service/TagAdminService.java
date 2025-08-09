@@ -2,8 +2,8 @@ package com.cc.talkserver.admin.service;
 
 import com.cc.talkpojo.Result.PageResult;
 import com.cc.talkpojo.Result.TagUpResult;
-import com.cc.talkpojo.dto.BookTagDTO;
 import com.cc.talkpojo.dto.PageTagDTO;
+import com.cc.talkpojo.dto.TagDTO;
 import com.cc.talkpojo.entity.Tag;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.cc.talkpojo.vo.TagVO;
@@ -32,14 +32,14 @@ public interface TagAdminService extends IService<Tag> {
      * 新增单个标签
      * @param bookTagDTO
      */
-    void tagSignalAdd(BookTagDTO bookTagDTO);
+    void tagSignalAdd(TagDTO bookTagDTO);
 
     /**
      * 批量新增标签
      * @param bookTagsList
      * @return
      */
-    TagUpResult tagsBatchAdd(List<BookTagDTO> bookTagsList);
+    TagUpResult tagsBatchAdd(List<TagDTO> bookTagsList);
 
     /**
      * 查询标签详情
@@ -53,7 +53,7 @@ public interface TagAdminService extends IService<Tag> {
      * @param id
      * @param bookTagDTO
      */
-    void tagRevise(Long id, BookTagDTO bookTagDTO);
+    void tagRevise(Long id, TagDTO bookTagDTO);
 
 
     /**
