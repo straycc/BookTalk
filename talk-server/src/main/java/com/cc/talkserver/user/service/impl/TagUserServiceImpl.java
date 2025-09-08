@@ -2,10 +2,7 @@ package com.cc.talkserver.user.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.Result;
-import co.elastic.clients.elasticsearch.core.DeleteRequest;
-import co.elastic.clients.elasticsearch.core.DeleteResponse;
-import co.elastic.clients.elasticsearch.core.IndexRequest;
-import co.elastic.clients.elasticsearch.core.IndexResponse;
+import co.elastic.clients.elasticsearch.core.*;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cc.talkcommon.constant.BusinessConstant;
 import com.cc.talkcommon.constant.ElasticsearchConstant;
@@ -24,10 +21,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import springfox.documentation.service.Response;
 
 import javax.annotation.Resource;
-import java.beans.Transient;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -245,6 +240,43 @@ public class TagUserServiceImpl extends ServiceImpl<TagUserMapper, Tag> implemen
         queryWrapper.eq(Tag::getCreatorId, userId);
         List<Tag> tags = tagUserMapper.selectList(queryWrapper);
         return fillAndConvert(tags);
+    }
+
+    /**
+     * 根据标签名查询标签
+     * @param tagName
+     * @return
+     */
+    @Override
+    public TagVO getByTagName(String tagName) {
+
+        if(tagName == null || tagName.trim().isEmpty()) {
+            throw new BaseException(BusinessConstant.PARAM_ERROR);
+        }
+
+        // 查询Es
+        try {
+            // 使用 SearchRequest.Builder 创建请求
+            SearchRequest searchRequest = new SearchRequest.Builder()
+                    .index(ElasticsearchConstant.ES_TAG_INDEX)
+                    .query(q -> q.term(t -> t.field("name.keyword").value(tagName)))
+                    .build();
+
+            SearchResponse<TagES> searchResponse = elasticsearchClient.search(searchRequest,TagES.class);
+            if (searchResponse.hits().total() != null && searchResponse.hits().total().value() > 0) {
+                TagES tagES = searchResponse.hits().hits().get(0).source();
+                if (tagES != null) {
+                    log.info(tagES.toString());
+                }
+                return ConvertUtils.convert(tagES, TagVO.class);
+            }
+
+
+        } catch (IOException e) {
+            log.error("查询tag失败tagName={}", tagName, e);
+            throw new BaseException(ElasticsearchConstant.ES_TAG_SEARCH_ERROR);
+        }
+        return null;
     }
 
 

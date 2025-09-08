@@ -5,7 +5,6 @@ import com.cc.talkcommon.constant.BusinessConstant;
 import com.cc.talkcommon.result.Result;
 import com.cc.talkpojo.dto.TagDTO;
 import com.cc.talkpojo.vo.TagVO;
-import com.cc.talkpojo.vo.UserVO;
 import com.cc.talkserver.user.service.TagUserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -24,7 +23,7 @@ import java.util.List;
  * @since 2025-08-02
  */
 @RestController
-@RequestMapping("/tag")
+@RequestMapping("user/tag")
 @Slf4j
 @Api(tags = "标签相关功能")
 
@@ -117,5 +116,17 @@ public class TagController {
     public Result<List<TagVO>> hotTag() {
         return Result.success();
     }
+
+    /**
+     * 根据标签名查询标签
+     */
+    @ApiOperation("根据标签名查询标签")
+    @GetMapping("/{tagName}")
+    public Result<TagVO> getTagName(@PathVariable String tagName) {
+        log.info("根据标签名查询，tagName：{}",tagName);
+        TagVO tagVO = tagUserService.getByTagName(tagName);
+        return Result.success(tagVO);
+    }
+
 
 }

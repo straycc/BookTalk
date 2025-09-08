@@ -21,14 +21,15 @@ CREATE TABLE book_review (
 
 
 #书评评论表
-CREATE TABLE book_review_reply (
-                                   id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '回复ID',
-                                   review_id BIGINT NOT NULL COMMENT '主评论ID',
-                                   user_id BIGINT NOT NULL COMMENT '回复人ID',
-                                   content TEXT NOT NULL COMMENT '回复内容',
-                                   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-                                   INDEX idx_review_id (review_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='书评回复表';
+CREATE TABLE comment (
+                         id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                         target_id BIGINT NOT NULL COMMENT '评论目标ID',
+                         target_type VARCHAR(20) NOT NULL COMMENT '评论目标类型: BOOK, REVIEW, COMMENT',
+                         parent_id BIGINT NULL COMMENT '父评论ID，空表示直接评论目标',
+                         user_id BIGINT NOT NULL COMMENT '评论人ID',
+                         content TEXT NOT NULL COMMENT '评论内容',
+                         create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 
 #书评点赞表

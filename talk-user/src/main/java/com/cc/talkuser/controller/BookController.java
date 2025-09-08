@@ -90,16 +90,14 @@ public class BookController {
 
 
 
-
-
     /**
      * 根据标签分页查询书籍
      * @param id
      * @return
      */
     @ApiOperation("根据标签查询书籍")
-    @GetMapping("/tag/{id}")
-    public Result<PageResult<BookShowDTO>> PageByTag(@PathVariable("id") Integer id, @RequestBody PageBookDTO pageBookDTO) {
+    @PostMapping("/tag/{tagId}")
+    public Result<PageResult<BookShowDTO>> PageByTag(@PathVariable("tagId") Long id, @RequestBody PageBookDTO pageBookDTO) {
          PageResult<BookShowDTO> pageResult = bookUserService.getPageByTag(id,pageBookDTO);
          return Result.success(pageResult);
     }
@@ -117,5 +115,7 @@ public class BookController {
         PageResult <BookShowDTO> hotBookPage = bookUserService.getHotBook(pageBookDTO);
         return Result.success(hotBookPage);
     }
+
+
 
 }

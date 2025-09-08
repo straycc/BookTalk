@@ -18,6 +18,7 @@ public class BusinessConstant {
     public static final String USER_ROLE_USER = "普通用户";
     public static final String USER_ROLE_ADMIN = "管理员用户";
     public static final Long USER_ROLE_ADMIN_ID = 0L;
+    public static final String USER_DEFAULT_PASSWORD = "123456";
 
     //tag相关
     public static final String TAG_WITH_BOOKS = "部分标签已被书籍引用，无法删除";
@@ -52,5 +53,23 @@ public class BusinessConstant {
 
     //分类相关
     public static final String CATEGORY_NOT_EXIST = "分类不存在";
+
+
+    //书评相关
+    public static final  String REVIEW_TYPE_ERROR = "书评类型有误";
+    public static final  String REVIEW_AUTH_ERROR = "无权限修改他人的书评";
+    public static final  Integer  REVIEW_TYPE_DEFAULT = 0;
+    public static final  String  REVIEW_Title_DEFAULT = "标题未填写";
+    public static final  String REVIEW_NOTEXIST = "书评不存在";
+
+    public static final  String REVIEW_BOOK_NOTEXIST = "书评书籍不存在";
+    public static final  Integer REVIEW_WAIT_AUDIT = 1; // 书评待审核
+    public static final  Integer REVIEW_TYPE_SHORT = 0; // 短书评
+    public static final  Integer REVIEW_TYPE_LONG = 1; // 长书评
+
+    //Result
+    public static final  String PUBLISH_BOOK_SUCCESS = "发布书评成功";
+    public static final  String DELETE_BOOK_SUCCESS = "删除书评成功";
+    public static final  String UPDATE_BOOK_SUCCESS = "修改书评成功";
 
 }

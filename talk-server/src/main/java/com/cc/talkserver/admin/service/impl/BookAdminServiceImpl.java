@@ -324,7 +324,6 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
 
     }
 
-
     /**
      * 删除单本图书(对于热点缓存里的BookId,采用“定期刷新缓存”和“读时校验”的策略)
      * @param id

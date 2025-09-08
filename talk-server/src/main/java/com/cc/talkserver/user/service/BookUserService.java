@@ -55,7 +55,7 @@ public interface BookUserService extends IService<Book> {
      * @param id
      * @return
      */
-    PageResult<BookShowDTO> getPageByTag(Integer id,PageBookDTO pageBookDTO);
+    PageResult<BookShowDTO> getPageByTag(Long id,PageBookDTO pageBookDTO);
 
 
     /**

@@ -15,7 +15,6 @@ public class TagES {
 
     private Long id;
 
-
     /**
      * 标签创建者id
      */
@@ -30,7 +29,6 @@ public class TagES {
      * 标签名称
      */
     private String name;
-
 
     /**
      * 标签描述

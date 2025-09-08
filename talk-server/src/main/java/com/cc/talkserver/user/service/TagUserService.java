@@ -57,4 +57,12 @@ public interface TagUserService extends IService<Tag> {
      * @return
      */
     List<TagVO> getUserTags(Long userId);
+
+
+    /**
+     * 根据标签名查询标签
+     * @param tagName
+     * @return
+     */
+    TagVO getByTagName(String tagName);
 }
