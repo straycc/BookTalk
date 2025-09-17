@@ -1,4 +1,5 @@
-package com.cc.talkpojo.Result;
+package com.cc.talkpojo.result;
+
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,20 +10,20 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UploadResult {
+public class CategoryUpResult {
+
     /**
      * 成功插入的数量
      */
     private int successCount;
 
     /**
-     * 被跳过的图书ISBN
+     *  已经存在分类
      */
-    private List<String> skippedIsbn;
+    private List<String> existCategoryList;
 
     /**
-     * ISBN为空的图书
+     * 分类名为空的分类
      */
-    private List<String> invalidTitleList;
-
+    private List<String> emptyCategoryList;
 }

@@ -1,14 +1,13 @@
 package com.cc.talkserver.user.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.cc.talkpojo.Result.PageResult;
+import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.BookShowDTO;
 import com.cc.talkpojo.dto.PageBookDTO;
 import com.cc.talkpojo.dto.PageSearchDTO;
 import com.cc.talkpojo.entity.Book;
 import com.cc.talkpojo.vo.BookVO;
 import com.cc.talkpojo.vo.CategoryVO;
-import com.cc.talkpojo.vo.TagVO;
 
 import java.util.List;
 

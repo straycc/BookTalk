@@ -1,7 +1,7 @@
 package com.cc.talkserver.admin.service;
 
-import com.cc.talkpojo.Result.CategoryUpResult;
-import com.cc.talkpojo.Result.PageResult;
+import com.cc.talkpojo.result.CategoryUpResult;
+import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.CategoryDTO;
 import com.cc.talkpojo.dto.PageCategoryDTO;
 import com.cc.talkpojo.entity.BookCategory;

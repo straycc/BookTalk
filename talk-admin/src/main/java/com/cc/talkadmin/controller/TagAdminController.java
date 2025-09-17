@@ -3,8 +3,8 @@ package com.cc.talkadmin.controller;
 
 import com.cc.talkcommon.result.Result;
 import com.cc.talkcommon.utils.ConvertUtils;
-import com.cc.talkpojo.Result.PageResult;
-import com.cc.talkpojo.Result.TagUpResult;
+import com.cc.talkpojo.result.PageResult;
+import com.cc.talkpojo.result.TagUpResult;
 import com.cc.talkpojo.dto.PageTagDTO;
 import com.cc.talkpojo.dto.TagDTO;
 import com.cc.talkpojo.vo.TagVO;

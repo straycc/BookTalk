@@ -1,7 +1,7 @@
 package com.cc.talkserver.user.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.cc.talkpojo.Result.PageResult;
+import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.BookReviewDTO;
 import com.cc.talkpojo.dto.PageReviewDTO;
 import com.cc.talkpojo.entity.BookReview;
@@ -40,10 +40,16 @@ public interface ReviewUserService extends IService<BookReview> {
 
     /**
      * 查询书籍的书评列表
-     *
-     * @param bookId
      * @param pageReviewDTO
      * @return
      */
-    PageResult<BookReviewVO> listBookReviews(Long bookId, PageReviewDTO pageReviewDTO);
+    PageResult<BookReviewVO> bookReviewsPage(PageReviewDTO pageReviewDTO);
+
+
+    /**
+     * 查询书评详情
+     * @param bookReviewId
+     * @return
+     */
+    BookReviewVO getDetail(Long bookReviewId);
 }

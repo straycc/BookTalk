@@ -5,6 +5,7 @@ import cn.hutool.crypto.SecureUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.cc.talkcommon.constant.RedisCacheConstant;
 import com.cc.talkcommon.constant.Upload;
 import com.cc.talkcommon.constant.UserConstant;
 import com.cc.talkcommon.context.UserContext;
@@ -24,6 +25,7 @@ import com.cc.talkserver.user.mapper.UserMapper;
 import com.cc.talkserver.user.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,6 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -56,6 +59,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Resource
     private UserInfoUserMapper userInfoUserMapper;
+
+
+    @Resource
+    private RedisTemplate<String, String> customStringRedisTemplate;
+
+    @Resource
+    private RedisTemplate<String, Object> customObjectRedisTemplate;
 
 
     /**
@@ -138,6 +148,27 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         //5.构造JWT令牌
         String token = JwtUtil.generateToken(userDTO);
+
+
+        //6. 缓存用户信息到redis
+        String key = RedisCacheConstant.USER_INFO_KEY_PREFIX + user.getId();
+        LambdaQueryWrapper<UserInfo> queryWrapper = Wrappers.lambdaQuery();
+        queryWrapper.eq(UserInfo::getUserId,user.getId());
+        UserInfo userInfo = userInfoUserMapper.selectOne(queryWrapper);
+
+
+        UserVO userVO = new UserVO();
+        userVO.setUserId(user.getId());
+        userVO.setUsername(user.getUsername());
+        userVO.setNickname(userInfo.getNickname());
+        userVO.setAvatar(userInfo.getAvatar());
+        customObjectRedisTemplate.opsForValue().set(
+                key,
+                userVO,
+                30,
+                TimeUnit.MINUTES
+        );
+
 
         //6.返回登录成功数据
         return UserLoginVO.builder()

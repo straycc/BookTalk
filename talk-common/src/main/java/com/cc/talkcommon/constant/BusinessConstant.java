@@ -4,6 +4,8 @@ public class BusinessConstant {
 
 
 
+    // 枚举类型相关
+    public static final String TARGETTYPE_ERROR = "目标类型非法" ;
 
 
     // 权限相关
@@ -12,6 +14,7 @@ public class BusinessConstant {
 
     //参数相关
     public static final String PARAM_ERROR = "参数错误" ;
+    public static final String PAGE_PARAM_ERROR = "分页参数错误" ;
     public static final String BATCH_DELETE_ERROR = "批量删除失败" ;
 
     //用户角色相关
@@ -19,6 +22,7 @@ public class BusinessConstant {
     public static final String USER_ROLE_ADMIN = "管理员用户";
     public static final Long USER_ROLE_ADMIN_ID = 0L;
     public static final String USER_DEFAULT_PASSWORD = "123456";
+
 
     //tag相关
     public static final String TAG_WITH_BOOKS = "部分标签已被书籍引用，无法删除";
@@ -71,5 +75,21 @@ public class BusinessConstant {
     public static final  String PUBLISH_BOOK_SUCCESS = "发布书评成功";
     public static final  String DELETE_BOOK_SUCCESS = "删除书评成功";
     public static final  String UPDATE_BOOK_SUCCESS = "修改书评成功";
+
+    //评论相关内容
+    public static final  String COMMENT_ISEMPTY = "书评为空";
+    public static final  String PARENTCOMMENT_NOTEXIST = "父评论不存在";
+    public static final  String PUBLISH_COMMENT_SUCCESS = "发布评论成功";
+    public static final  String DELETE_COMMENT_SUCCESS = "删除评论成功";
+    public static final  String COMMENT_NOTEXIST = "评论不存在";
+    public static final  String DELETE_COMMENT_ERROR = "仅支持删除自己的评论";
+
+    //点赞相关内容
+    public static final  String Like_RECORED_NOTEXIST = "点赞记录不存在，无法取消";
+    public static final  String LIKE_TYPE_BOOKLIST = "bookList";
+    public static final  String LIKE_TYPE_REVIEW = "bookReview";
+    public static final  String LIKE_TYPE_COMMENT = "comment";
+
+
 
 }

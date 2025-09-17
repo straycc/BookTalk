@@ -1,4 +1,4 @@
-package com.cc.talkpojo.Result;
+package com.cc.talkpojo.result;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -6,24 +6,23 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class TagUpResult {
-
+public class UploadResult {
     /**
      * 成功插入的数量
      */
     private int successCount;
 
     /**
-     *  已经存在标签
+     * 被跳过的图书ISBN
      */
-    private List<String> existTagList;
+    private List<String> skippedIsbn;
 
     /**
-     * 标签名为空
+     * ISBN为空的图书
      */
-    private List<String> emptyTagList;
+    private List<String> invalidTitleList;
+
 }

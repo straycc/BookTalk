@@ -1,13 +1,9 @@
 package com.cc.talkuser.controller;
-
-
 import com.cc.talkcommon.constant.BusinessConstant;
 import com.cc.talkcommon.result.Result;
-import com.cc.talkpojo.Result.PageResult;
+import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.BookReviewDTO;
-import com.cc.talkpojo.dto.PageDTO;
 import com.cc.talkpojo.dto.PageReviewDTO;
-import com.cc.talkpojo.entity.BookReview;
 import com.cc.talkpojo.vo.BookReviewVO;
 import com.cc.talkserver.user.service.ReviewUserService;
 import io.swagger.annotations.ApiOperation;
@@ -23,7 +19,7 @@ import javax.annotation.Resource;
  * @since 2025-06-30
  */
 @RestController
-@RequestMapping("user/book/review")
+@RequestMapping("user/bookReview")
 public class BookReviewController {
 
     @Resource
@@ -71,13 +67,41 @@ public class BookReviewController {
 
     /**
      * 查询书籍的书评列表
-     * @param bookId
      * @return
      */
     @ApiOperation("查询书籍的书评列表")
-    @GetMapping("/list/{bookId}")
-    public Result<PageResult<BookReviewVO>> listBookReviews( @PathVariable("bookId") Long bookId, PageReviewDTO pageReviewDTO) {
-        PageResult<BookReviewVO> pageResult = reviewUserService.listBookReviews(bookId,pageReviewDTO);
+    @GetMapping("/page")
+    public Result<PageResult<BookReviewVO>> bookReviewsPage(PageReviewDTO pageReviewDTO) {
+        PageResult<BookReviewVO> pageResult = reviewUserService.bookReviewsPage(pageReviewDTO);
         return Result.success(pageResult);
     }
+
+    /**
+     * 查询书评详情
+     * @param bookReviewId
+     * @return
+     */
+    @ApiOperation("查询书评详情")
+    @GetMapping("/detail/{bookReviewId}")
+    public Result<BookReviewVO> bookReviewDetail(@PathVariable("bookReviewId") Long bookReviewId) {
+        BookReviewVO bookReviewVO  = reviewUserService.getDetail(bookReviewId);
+        return Result.success();
+    }
+
+
+    /**
+     * 获取当前热度最高的书评（根据评论数量 + 点赞数量）
+     * @param bookId
+     * @return
+     */
+    //TODO 待实现
+    @ApiOperation("查询当前热度最高的书评")
+    @GetMapping("/hotReview/{bookId}")
+    public Result<BookReviewVO> bookReviewHotOne(@PathVariable("bookId") Long bookId) {
+        return Result.success();
+    }
+
+
+
+
 }

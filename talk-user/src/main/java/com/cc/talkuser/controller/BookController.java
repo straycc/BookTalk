@@ -2,7 +2,7 @@ package com.cc.talkuser.controller;
 
 
 import com.cc.talkcommon.result.Result;
-import com.cc.talkpojo.Result.PageResult;
+import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.BookShowDTO;
 import com.cc.talkpojo.dto.PageBookDTO;
 import com.cc.talkpojo.dto.PageSearchDTO;

@@ -25,6 +25,7 @@ public class UserDTO implements Serializable {
      */
     private String username;
 
+
     /**
      * 密码
      */

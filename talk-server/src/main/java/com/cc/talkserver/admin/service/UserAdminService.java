@@ -1,6 +1,6 @@
 package com.cc.talkserver.admin.service;
 
-import com.cc.talkpojo.Result.PageResult;
+import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.admin.PageUserDTO;
 import com.cc.talkpojo.dto.UserLoginDTO;
 import com.cc.talkpojo.entity.User;

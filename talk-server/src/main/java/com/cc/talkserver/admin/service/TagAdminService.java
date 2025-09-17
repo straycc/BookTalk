@@ -1,7 +1,7 @@
 package com.cc.talkserver.admin.service;
 
-import com.cc.talkpojo.Result.PageResult;
-import com.cc.talkpojo.Result.TagUpResult;
+import com.cc.talkpojo.result.PageResult;
+import com.cc.talkpojo.result.TagUpResult;
 import com.cc.talkpojo.dto.PageTagDTO;
 import com.cc.talkpojo.dto.TagDTO;
 import com.cc.talkpojo.entity.Tag;

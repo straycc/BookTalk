@@ -20,6 +20,18 @@ public class RedisCacheConstant {
     public static final String BOOK_DETAIL_KEY_PREFIX = "book:detail";
 
 
+    //用户相关
+    public static final String USER_INFO_KEY_PREFIX = "user:info:";
+
+
+    //点赞相关
+    public static final String LIKE_USER_PREFIX = "like:user:"; // 用户维度，快速判断是否点赞
+    public static final String LIKE_TARGET_PREFIX = "like:target:"; // 目标维度， 快速统计点赞数
+    public static final String LIKE_COUNT_PREFIX = "like:count:"; // 点赞计数缓存
+
+
+
+
 
 
 }

@@ -2,21 +2,21 @@ package com.cc.talkserver.user.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cc.talkcommon.constant.BusinessConstant;
 import com.cc.talkcommon.context.UserContext;
 import com.cc.talkcommon.exception.BaseException;
 import com.cc.talkcommon.utils.CheckPageParam;
-import com.cc.talkpojo.Result.PageResult;
+import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.BookReviewDTO;
 import com.cc.talkpojo.dto.PageReviewDTO;
-import com.cc.talkpojo.entity.Book;
 import com.cc.talkpojo.entity.BookReview;
-import com.cc.talkpojo.entity.User;
+import com.cc.talkpojo.entity.UserInfo;
 import com.cc.talkpojo.vo.BookReviewVO;
 import com.cc.talkserver.user.mapper.BookUserMapper;
 import com.cc.talkserver.user.mapper.ReviewUserMapper;
+import com.cc.talkserver.user.mapper.UserInfoUserMapper;
 import com.cc.talkserver.user.mapper.UserMapper;
 import com.cc.talkserver.user.service.ReviewUserService;
 import com.github.pagehelper.PageHelper;
@@ -26,7 +26,6 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -46,6 +45,13 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
 
     @Resource
     private BookUserMapper bookUserMapper;
+    @Resource
+    private UserMapper userMapper;
+
+    @Resource
+    private UserInfoUserMapper userInfoUserMapper;
+
+
 
 
     /**
@@ -80,7 +86,7 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
         // 构建 BookReview 实体
         BookReview bookReview = BookReview.builder()
                 .bookId(bookReviewDTO.getBookId())
-                .userId(bookReviewDTO.getUserId())
+                .userId(UserContext.getUser().getId())
                 .type(type)
                 .title(title) // 短评时 title 可能为 null
                 .content(bookReviewDTO.getContent())
@@ -145,35 +151,45 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
 
     /**
      * 查询书籍的书评列表
-     * @param bookId
      * @param pageReviewDTO
      * @return
      */
     @Override
-    public PageResult<BookReviewVO> listBookReviews(Long bookId, PageReviewDTO pageReviewDTO) {
-        // 检查参数
+    public PageResult<BookReviewVO> bookReviewsPage(PageReviewDTO pageReviewDTO) {
+        // 1. 检查参数
         CheckPageParam.checkPageDTO(pageReviewDTO);
-        if(bookId == null){
+        if (pageReviewDTO.getBookId() == null) {
             throw new BaseException(BusinessConstant.PARAM_ERROR);
         }
-        // 检查book是否存在
-        if(bookUserMapper.selectById(bookId) == null){
+
+        // 2. 检查 book 是否存在
+        if (bookUserMapper.selectById(pageReviewDTO.getBookId()) == null) {
             throw new BaseException(BusinessConstant.REVIEW_BOOK_NOTEXIST);
         }
-        // 分页查询
+
+        // 3. 分页查询
         PageHelper.startPage(pageReviewDTO.getPageNum(), pageReviewDTO.getPageSize());
         LambdaQueryWrapper<BookReview> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(BookReview::getBookId, bookId);
+        wrapper.eq(BookReview::getBookId, pageReviewDTO.getBookId());
+
         if (pageReviewDTO.getType() != null) {
             wrapper.eq(BookReview::getType, pageReviewDTO.getType());
         }
-        wrapper.orderByDesc(BookReview::getCreateTime);// 可加排序
+        if (pageReviewDTO.getUserId() != null) {
+            wrapper.eq(BookReview::getUserId, pageReviewDTO.getUserId());
+        }
+
+        // 排序处理
+        if ("asc".equalsIgnoreCase(pageReviewDTO.getSortOrder())) {
+            wrapper.orderByAsc(getSortColumn(pageReviewDTO.getSortField()));
+        } else {
+            wrapper.orderByDesc(getSortColumn(pageReviewDTO.getSortField()));
+        }
 
         List<BookReview> reviewList = reviewUserMapper.selectList(wrapper);
-
-        // 分页信息封装
         PageInfo<BookReview> pageInfo = new PageInfo<>(reviewList);
 
+        // 4. 转换 VO
         List<BookReviewVO> bookReviewVOList = reviewList.stream()
                 .map(review -> {
                     BookReviewVO vo = new BookReviewVO();
@@ -187,14 +203,61 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
                     vo.setUserId(review.getUserId());
                     vo.setCreateTime(review.getCreateTime());
                     vo.setUpdateTime(review.getUpdateTime());
-                    // 如果有用户信息，可以通过 userId 查询 username/avatar
+
+                    // 查用户信息
                     vo.setUsername(UserContext.getUser().getUsername());
+//                    User user = userMapper.selectById(review.getUserId());
+//                    if (user != null) {
+//                        vo.setUsername(user.getUsername());
+//                        vo.setAvatar(user.getAvatar()); // 头像
+//                    }
                     return vo;
                 })
                 .collect(Collectors.toList());
+
+        // 5. 返回结果
         PageResult<BookReviewVO> pageResult = new PageResult<>();
         pageResult.setTotal(pageInfo.getTotal());
         pageResult.setRecords(bookReviewVOList);
         return pageResult;
     }
+
+
+    /**
+     * 查询书评详情
+     * @param bookReviewId
+     * @return
+     */
+    @Override
+    public BookReviewVO getDetail(Long bookReviewId) {
+        if(bookReviewId == null || bookReviewId <= 0){
+            throw new BaseException(BusinessConstant.PARAM_ERROR);
+        }
+        BookReview bookReview = reviewUserMapper.selectById(bookReviewId);
+        BookReviewVO bookReviewVO = new BookReviewVO();
+        BeanUtil.copyProperties(bookReview, bookReviewVO);
+        // 查询书评用户信息
+        UserInfo userInfo = userInfoUserMapper.selectById(bookReview.getUserId());
+        bookReviewVO.setUserId(userInfo.getUserId());
+        bookReviewVO.setUsername(userInfo.getNickname());
+        bookReviewVO.setAvatarUrl(userInfo.getAvatar());
+
+        return bookReviewVO;
+    }
+
+
+    /**
+     * 获取排序字段对应的列
+     */
+    private SFunction<BookReview, ?> getSortColumn(String sortField) {
+        if ("score".equalsIgnoreCase(sortField)) {
+            return BookReview::getScore;
+        } else if ("likeCount".equalsIgnoreCase(sortField)) {
+            return BookReview::getLikeCount;
+        } else {
+            return BookReview::getCreateTime; // 默认按创建时间
+        }
+    }
+
+
 }

@@ -1,5 +1,4 @@
-package com.cc.talkpojo.Result;
-
+package com.cc.talkpojo.result;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,10 +6,11 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CategoryUpResult {
+public class TagUpResult {
 
     /**
      * 成功插入的数量
@@ -18,12 +18,12 @@ public class CategoryUpResult {
     private int successCount;
 
     /**
-     *  已经存在分类
+     *  已经存在标签
      */
-    private List<String> existCategoryList;
+    private List<String> existTagList;
 
     /**
-     * 分类名为空的分类
+     * 标签名为空
      */
-    private List<String> emptyCategoryList;
+    private List<String> emptyTagList;
 }

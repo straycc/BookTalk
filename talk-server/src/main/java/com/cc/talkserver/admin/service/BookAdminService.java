@@ -1,9 +1,8 @@
 package com.cc.talkserver.admin.service;
 
-import com.cc.talkpojo.Result.PageResult;
-import com.cc.talkpojo.Result.UploadResult;
+import com.cc.talkpojo.result.PageResult;
+import com.cc.talkpojo.result.UploadResult;
 import com.cc.talkpojo.dto.BookDTO;
-import com.cc.talkpojo.dto.BookShowDTO;
 import com.cc.talkpojo.dto.PageBookDTO;
 import com.cc.talkpojo.entity.Book;
 import com.baomidou.mybatisplus.extension.service.IService;

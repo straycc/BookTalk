@@ -1,4 +1,4 @@
-package com.cc.talkpojo.Result;
+package com.cc.talkpojo.result;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
