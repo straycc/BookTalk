@@ -4,7 +4,7 @@ package com.cc.talkuser.controller;
 import com.cc.talkcommon.result.Result;
 import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.BookShowDTO;
-import com.cc.talkpojo.dto.PageBookDTO;
+import com.cc.talkpojo.dto.BookPageDTO;
 import com.cc.talkpojo.dto.PageSearchDTO;
 import com.cc.talkpojo.vo.BookVO;
 import com.cc.talkpojo.vo.CategoryVO;
@@ -52,13 +52,13 @@ public class BookController {
 
     /**
      * 书籍分页查询
-     * @param pageBookDTO
+     * @param bookPageDTO
      * @return
      */
     @ApiOperation("书籍分页查询")
     @PostMapping("/page")
-    public Result<PageResult<BookShowDTO>> page(@RequestBody PageBookDTO pageBookDTO) {
-        PageResult<BookShowDTO> pageResult = bookUserService.getBookPage(pageBookDTO);
+    public Result<PageResult<BookShowDTO>> page(@RequestBody BookPageDTO bookPageDTO) {
+        PageResult<BookShowDTO> pageResult = bookUserService.getBookPage(bookPageDTO);
         return Result.success(pageResult);
     }
 
@@ -97,22 +97,22 @@ public class BookController {
      */
     @ApiOperation("根据标签查询书籍")
     @PostMapping("/tag/{tagId}")
-    public Result<PageResult<BookShowDTO>> PageByTag(@PathVariable("tagId") Long id, @RequestBody PageBookDTO pageBookDTO) {
-         PageResult<BookShowDTO> pageResult = bookUserService.getPageByTag(id,pageBookDTO);
+    public Result<PageResult<BookShowDTO>> PageByTag(@PathVariable("tagId") Long id, @RequestBody BookPageDTO bookPageDTO) {
+         PageResult<BookShowDTO> pageResult = bookUserService.getPageByTag(id, bookPageDTO);
          return Result.success(pageResult);
     }
 
 
     /**
      * 热门书籍分页查询
-     * @param pageBookDTO
+     * @param bookPageDTO
      * @return
      */
     @ApiOperation("热门书籍查询")
     @GetMapping("/hootBook")
-    public Result<PageResult<BookShowDTO>> hootBook(@RequestBody PageBookDTO pageBookDTO) {
+    public Result<PageResult<BookShowDTO>> hootBook(@RequestBody BookPageDTO bookPageDTO) {
 
-        PageResult <BookShowDTO> hotBookPage = bookUserService.getHotBook(pageBookDTO);
+        PageResult <BookShowDTO> hotBookPage = bookUserService.getHotBook(bookPageDTO);
         return Result.success(hotBookPage);
     }
 

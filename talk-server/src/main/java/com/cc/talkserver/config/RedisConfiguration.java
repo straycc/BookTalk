@@ -1,5 +1,9 @@
 package com.cc.talkserver.config;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,7 +46,21 @@ public class RedisConfiguration {
         //    ─ key / hashKey  ➜ StringRedisSerializer：UTF‑8 字符串 → 二进制
         //    ─ value / hashValue ➜ GenericJackson2JsonRedisSerializer：任意对象 → JSON → 二进制
         StringRedisSerializer keySerializer = new StringRedisSerializer();
-        GenericJackson2JsonRedisSerializer valueSerializer = new GenericJackson2JsonRedisSerializer();
+
+
+        // 自定义 ObjectMapper
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule()); // 支持 LocalDateTime
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // 不写成时间戳
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+
+
+        // 保留类信息
+        objectMapper.activateDefaultTyping(
+                objectMapper.getPolymorphicTypeValidator(),
+                ObjectMapper.DefaultTyping.NON_FINAL
+        );
+        GenericJackson2JsonRedisSerializer valueSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
 
         // 为四类数据（key、value、hashKey、hashValue）分别指定序列化策略
         template.setKeySerializer(keySerializer);

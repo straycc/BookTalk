@@ -4,10 +4,9 @@ package com.cc.talkpojo.dto;
 import lombok.Data;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Data
-public class PageCategoryDTO implements PageDTO{
+public class CategoryPageDTO implements PageDTO{
 
     /**
      * 页面号

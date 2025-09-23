@@ -15,7 +15,7 @@ import com.cc.talkcommon.utils.ConvertUtils;
 import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.result.UploadResult;
 import com.cc.talkpojo.dto.BookDTO;
-import com.cc.talkpojo.dto.PageBookDTO;
+import com.cc.talkpojo.dto.BookPageDTO;
 import com.cc.talkpojo.entity.Book;
 import com.cc.talkpojo.entity.BookCategory;
 import com.cc.talkpojo.entity.BookES;
@@ -223,19 +223,19 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
 
     /**
      * 图书信息分页查询
-     * @param pageBookDTO
+     * @param bookPageDTO
      * @return
      */
     @Override
-    public PageResult<BookVO> getBookPage(PageBookDTO pageBookDTO) {
-        if(pageBookDTO == null || pageBookDTO.getPageNum() == null || pageBookDTO.getPageSize() == null){
+    public PageResult<BookVO> getBookPage(BookPageDTO bookPageDTO) {
+        if(bookPageDTO == null || bookPageDTO.getPageNum() == null || bookPageDTO.getPageSize() == null){
             throw new BaseException(BusinessConstant.PARAM_ERROR);
         }
-        PageHelper.startPage(pageBookDTO.getPageNum(), pageBookDTO.getPageSize());
+        PageHelper.startPage(bookPageDTO.getPageNum(), bookPageDTO.getPageSize());
 
 
         // 2. 构建查询条件(工具类)
-        LambdaQueryWrapper<Book> wrapper = BuildQueryWrapper.buildBookQueryWrapper(pageBookDTO);
+        LambdaQueryWrapper<Book> wrapper = BuildQueryWrapper.buildBookQueryWrapper(bookPageDTO);
 
         // 3. 执行查询（必须是返回 List<Book>）
         List<Book> booksList = bookAdminMapper.selectList(wrapper);

@@ -21,7 +21,7 @@ import com.cc.talkcommon.utils.CheckPageParam;
 import com.cc.talkcommon.utils.ConvertUtils;
 import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.BookShowDTO;
-import com.cc.talkpojo.dto.PageBookDTO;
+import com.cc.talkpojo.dto.BookPageDTO;
 import com.cc.talkpojo.dto.PageSearchDTO;
 import com.cc.talkpojo.entity.Book;
 import com.cc.talkpojo.entity.BookCategory;
@@ -135,19 +135,19 @@ public class BookUserServiceImpl extends ServiceImpl<BookUserMapper, Book> imple
 
     /**
      * 图书分页查询展示
-     * @param pageBookDTO
+     * @param bookPageDTO
      * @return
      */
     @Override
-    public PageResult<BookShowDTO> getBookPage(PageBookDTO pageBookDTO) {
+    public PageResult<BookShowDTO> getBookPage(BookPageDTO bookPageDTO) {
         // 1. 参数检查
-        CheckPageParam.checkPageDTO(pageBookDTO);
+        CheckPageParam.checkPageDTO(bookPageDTO);
 
         // 2. 构建查询条件
-        LambdaQueryWrapper<Book> wrapper = BuildQueryWrapper.buildBookQueryWrapper(pageBookDTO);
+        LambdaQueryWrapper<Book> wrapper = BuildQueryWrapper.buildBookQueryWrapper(bookPageDTO);
 
         // 3. 执行分页查询
-        PageHelper.startPage(pageBookDTO.getPageNum(), pageBookDTO.getPageSize());
+        PageHelper.startPage(bookPageDTO.getPageNum(), bookPageDTO.getPageSize());
         List<Book> booksList = bookUserMapper.selectList(wrapper);
 
         // 更安全的获取分页信息方式
@@ -297,19 +297,19 @@ public class BookUserServiceImpl extends ServiceImpl<BookUserMapper, Book> imple
      * @return
      */
     @Override
-    public PageResult<BookShowDTO> getPageByTag(Long id,PageBookDTO pageBookDTO) {
+    public PageResult<BookShowDTO> getPageByTag(Long id, BookPageDTO bookPageDTO) {
 
         // 1. 参数检查
-        CheckPageParam.checkPageDTO(pageBookDTO);
+        CheckPageParam.checkPageDTO(bookPageDTO);
 
         // 2. 查询与标签关联的图书
-        int from = (pageBookDTO.getPageNum() - 1) * pageBookDTO.getPageSize();
-        int size = pageBookDTO.getPageSize();
+        int from = (bookPageDTO.getPageNum() - 1) * bookPageDTO.getPageSize();
+        int size = bookPageDTO.getPageSize();
         // 查询book_tag_index
         try {
             SearchResponse<BookTagRelation> relationResp = elasticsearchClient.search(s -> s
                             .index(ElasticsearchConstant.ES_BOOK_TAG_INDEX)
-                            .query(q -> q.term(t -> t.field("tagId.keyword").value(pageBookDTO.getTagId())))
+                            .query(q -> q.term(t -> t.field("tagId.keyword").value(bookPageDTO.getTagId())))
                             .from(from)
                             .size(size)
                             .sort(sort -> sort.field(f -> f.field("bookId.keyword").order(SortOrder.Asc))),
@@ -354,18 +354,18 @@ public class BookUserServiceImpl extends ServiceImpl<BookUserMapper, Book> imple
 
     /**
      * 查询缓存热门书籍
-     * @param pageBookDTO
+     * @param bookPageDTO
      * @return
      */
     @Override
-    public PageResult<BookShowDTO> getHotBook(PageBookDTO pageBookDTO) {
+    public PageResult<BookShowDTO> getHotBook(BookPageDTO bookPageDTO) {
 
         //1. 参数检查
-        CheckPageParam.checkPageDTO(pageBookDTO);
+        CheckPageParam.checkPageDTO(bookPageDTO);
         //2. 获取必要参数
-        Long tagId = pageBookDTO.getTagId();
-        int pageNum = pageBookDTO.getPageNum();
-        int pageSize = pageBookDTO.getPageSize();
+        Long tagId = bookPageDTO.getTagId();
+        int pageNum = bookPageDTO.getPageNum();
+        int pageSize = bookPageDTO.getPageSize();
         int start = (pageNum - 1) * pageSize;
         int end = start + pageSize - 1;
 

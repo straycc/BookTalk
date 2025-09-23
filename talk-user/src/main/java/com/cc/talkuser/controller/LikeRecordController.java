@@ -7,6 +7,7 @@ import com.cc.talkpojo.dto.LikePageDTO;
 import com.cc.talkpojo.dto.LikeRecordDTO;
 import com.cc.talkpojo.vo.LikeRecordVO;
 import com.cc.talkserver.user.service.LikeRecordService;
+import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ import javax.annotation.Resource;
  */
 @RestController
 @RequestMapping("user/like")
+@Api(tags = "点赞相关接口")
 public class LikeRecordController {
 
     @Resource
@@ -47,7 +49,7 @@ public class LikeRecordController {
      * @return
      */
     @ApiOperation("查询用户点赞状态")
-    @GetMapping("/isLiked")
+    @PostMapping("/isLiked")
     public Result<Boolean> isLiked(@RequestBody LikeRecordDTO likeRecordDTO) {
         // 返回当前点赞状态 true/false
         boolean isLike = likeRecordService.getLikeStatus(likeRecordDTO);
@@ -62,7 +64,7 @@ public class LikeRecordController {
      * @return
      */
     @ApiOperation("查询目标点赞数量")
-    @GetMapping("/count/{targetId}")
+    @PostMapping("/count/{targetId}")
     public Result<Long> countLike(@PathVariable Long targetId, @RequestBody LikeRecordDTO likeRecordDTO) {
         Long count = likeRecordService.getLikeCount(targetId,likeRecordDTO);
         return Result.success(count);

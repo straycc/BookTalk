@@ -3,7 +3,7 @@ package com.cc.talkserver.admin.service;
 import com.cc.talkpojo.result.CategoryUpResult;
 import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.CategoryDTO;
-import com.cc.talkpojo.dto.PageCategoryDTO;
+import com.cc.talkpojo.dto.CategoryPageDTO;
 import com.cc.talkpojo.entity.BookCategory;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -22,10 +22,10 @@ public interface CategoryAdminService extends IService<BookCategory> {
 
     /**
      * 分类分页查询
-     * @param pageCategoryDTO
+     * @param categoryPageDTO
      * @return
      */
-    PageResult getCategoryPage(PageCategoryDTO pageCategoryDTO);
+    PageResult getCategoryPage(CategoryPageDTO categoryPageDTO);
 
     /**
      * 新增单个分类

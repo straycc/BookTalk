@@ -1,8 +1,11 @@
 package com.cc.talkserver.user.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.cc.talkcommon.constant.BusinessConstant;
 import com.cc.talkcommon.constant.RedisCacheConstant;
+import com.cc.talkcommon.context.UserContext;
 import com.cc.talkcommon.exception.BaseException;
 import com.cc.talkcommon.utils.CheckPageParam;
 import com.cc.talkcommon.utils.EnumUtil;
@@ -16,16 +19,14 @@ import com.cc.talkserver.user.mapper.*;
 import com.cc.talkserver.user.service.LikeRecordService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -92,7 +93,7 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
         if (Boolean.TRUE.equals(customStringRedisTemplate.opsForSet().isMember(userKey, targetField))) {
             // 已点过赞，则取消点赞
             customStringRedisTemplate.opsForSet().remove(userKey, targetField);
-            customStringRedisTemplate.opsForSet().remove(targetKey, likeRecordDTO.getUserId());
+            customStringRedisTemplate.opsForSet().remove(targetKey, String.valueOf(likeRecordDTO.getUserId()));
             customStringRedisTemplate.opsForValue().decrement(countKey);
             isLikedNow = false;
         }
@@ -137,9 +138,8 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
             throw new BaseException(BusinessConstant.PARAM_ERROR);
         }
         String targetField = likeRecordDTO.getLikeTargetType()+ ':' + likeRecordDTO.getTargetId();
-        String userKey = RedisCacheConstant.LIKE_TARGET_PREFIX + likeRecordDTO.getUserId();
+        String userKey = RedisCacheConstant.LIKE_USER_PREFIX + likeRecordDTO.getUserId();
         return Boolean.TRUE.equals(customStringRedisTemplate.opsForSet().isMember(userKey, targetField));
-
     }
 
 
@@ -160,7 +160,9 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
 
         String targetField = likeRecordDTO.getLikeTargetType()+ ':' + likeRecordDTO.getTargetId();
         String countKey = RedisCacheConstant.LIKE_COUNT_PREFIX + targetField;
-        return (Long) customObjectRedisTemplate.opsForValue().get(countKey);
+        return Optional.ofNullable(customObjectRedisTemplate.opsForValue().get(countKey))
+                .map(v -> Long.parseLong(v.toString()))
+                .orElse(0L);
     }
 
 
@@ -193,22 +195,23 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
                         Collectors.mapping(LikeRecord::getTargetId, Collectors.toList())));
 
 
-        Map<Long, BookList> bookLists = bookListMapper.selectBatchIds(targetMap.getOrDefault(BusinessConstant.LIKE_TYPE_BOOKLIST, Collections.emptyList()))
-                .stream().collect(Collectors.toMap(BookList::getId, b -> b));
+        Map<Long, BookList> bookLists = selectBatchIdsToMap(bookListMapper, targetMap.get(BusinessConstant.LIKE_TYPE_BOOKLIST));
+        Map<Long, BookReview> reviews = selectBatchIdsToMap(reviewUserMapper, targetMap.get(BusinessConstant.LIKE_TYPE_REVIEW));
+        Map<Long, Comment> comments = selectBatchIdsToMap(commentUserMapper, targetMap.get(BusinessConstant.LIKE_TYPE_COMMENT));
 
-        Map<Long, BookReview> reviews = reviewUserMapper.selectBatchIds(targetMap.getOrDefault(BusinessConstant.LIKE_TYPE_REVIEW, Collections.emptyList()))
-                .stream().collect(Collectors.toMap(BookReview::getId, r -> r));
 
-        Map<Long, Comment> comments = commentUserMapper.selectBatchIds(targetMap.getOrDefault(BusinessConstant.LIKE_TYPE_COMMENT, Collections.emptyList()))
-                .stream().collect(Collectors.toMap(Comment::getId, c -> c));
+        // 收集所有被点赞的用户ID
+        Set<Long> targetUserIds = new HashSet<>();
+        bookLists.values().forEach(b -> targetUserIds.add(b.getUserId()));
+        reviews.values().forEach(r -> targetUserIds.add(r.getUserId()));
+        comments.values().forEach(c -> targetUserIds.add(c.getUserId()));
 
-        // 批量获取用户信息
-        Set<Long> userIds = likeRecords.stream()
-                .flatMap(r -> Stream.of(r.getUserId(), r.getTargetId()))
-                .collect(Collectors.toSet());
-
-        Map<Long, UserInfo> userInfoMap = userInfoUserMapper.selectBatchIds(userIds)
-                .stream().collect(Collectors.toMap(UserInfo::getUserId, u -> u));
+        // 查询被点赞用户信息
+        List<UserInfo> userInfos = userInfoUserMapper.selectList(
+                Wrappers.<UserInfo>lambdaQuery().in(UserInfo::getUserId, targetUserIds)
+        );
+        Map<Long, UserInfo> targetUserInfoMap = userInfos.stream()
+                .collect(Collectors.toMap(UserInfo::getUserId, u -> u));
 
 
         // 填充 VO
@@ -219,17 +222,43 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
                     vo.setCreateTime(record.getCreateTime());
 
                     // 点赞者信息
-                    UserInfo likeUser = userInfoMap.get(record.getUserId());
-                    vo.setLikeUserId(likeUser.getUserId());
-                    vo.setNickName(likeUser.getNickname());
-                    vo.setTargetUserAvatar(likeUser.getAvatar());
+                    vo.setLikeUserId(UserContext.getUser().getId());
+                    vo.setNickName(UserContext.getUser().getNickName());
+                    vo.setTargetUserAvatar(UserContext.getUser().getAvatar());
 
                     // 被点赞对象信息
-                    UserInfo targetUser = userInfoMap.get(record.getTargetId());
-                    if (targetUser != null) {
-                        vo.setTargetUserId(targetUser.getUserId());
-                        vo.setTargetNickName(targetUser.getNickname());
-                        vo.setTargetUserAvatar(targetUser.getAvatar());
+                    Long targetUserId = null;
+                    switch (record.getTargetType()) {
+                        case BusinessConstant.LIKE_TYPE_BOOKLIST:
+                            BookList bookList = bookLists.get(record.getTargetId());
+                            if (bookList != null) {
+                                vo.setTargetContent(bookList.getTitle());
+                                targetUserId = bookList.getUserId();
+                            }
+                            break;
+                        case BusinessConstant.LIKE_TYPE_REVIEW:
+                            BookReview review = reviews.get(record.getTargetId());
+                            if (review != null) {
+                                vo.setTargetContent(review.getTitle() == null ? review.getContent() : review.getTitle());
+                                targetUserId = review.getUserId();
+                            }
+                            break;
+                        case BusinessConstant.LIKE_TYPE_COMMENT:
+                            Comment comment = comments.get(record.getTargetId());
+                            if (comment != null) {
+                                vo.setTargetContent(comment.getContent());
+                                targetUserId = comment.getUserId();
+                            }
+                            break;
+                    }
+
+                    if (targetUserId != null) {
+                        UserInfo targetUser = targetUserInfoMap.get(targetUserId);
+                        if (targetUser != null) {
+                            vo.setTargetUserId(targetUser.getUserId());
+                            vo.setTargetNickName(targetUser.getNickname());
+                            vo.setTargetUserAvatar(targetUser.getAvatar());
+                        }
                     }
 
                     // 填充被点赞内容
@@ -252,9 +281,11 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
                     return vo;
         }).collect(Collectors.toList());
 
+        PageInfo<LikeRecord> pageInfo = new PageInfo<>(likeRecords);
+
         PageResult<LikeRecordVO> pageResult = new PageResult<>();
         pageResult.setRecords(likeRecordVOs);
-        pageResult.setTotal(likeRecords.size()); // PageHelper分页总数
+        pageResult.setTotal(pageInfo.getTotal()); // 用 PageHelper 的总数
         return pageResult;
 
     }
@@ -273,6 +304,32 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
         } catch (IllegalArgumentException e) {
             throw new BaseException(BusinessConstant.TARGETTYPE_ERROR);
         }
+    }
+
+
+
+    /**
+     * 根据 ID 列表批量查询并转换成 Map
+     *
+     * @param mapper 批量查询 Mapper
+     * @param ids    ID 列表
+     * @param <T>    实体类型
+     * @return Map<id, entity>
+     */
+    public static <T> Map<Long, T> selectBatchIdsToMap(BaseMapper<T> mapper, List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return mapper.selectBatchIds(ids)
+                .stream()
+                .collect(Collectors.toMap(entity -> {
+                    try {
+                        // 假设每个实体都有 getId() 方法
+                        return (Long) entity.getClass().getMethod("getId").invoke(entity);
+                    } catch (Exception e) {
+                        throw new RuntimeException("获取实体ID失败", e);
+                    }
+                }, t -> t));
     }
 
 }

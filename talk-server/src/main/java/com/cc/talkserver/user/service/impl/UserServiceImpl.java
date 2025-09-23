@@ -144,24 +144,29 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         //4.用户信息存储threadLocal
         UserDTO userDTO = new UserDTO();
         BeanUtils.copyProperties(user,userDTO);
+        // 查询用户info
+        UserInfo userInfo = userInfoUserMapper.selectOne(
+                new LambdaQueryWrapper<UserInfo>().eq(UserInfo::getUserId, user.getId())
+        );
+        if(userInfo != null){
+            userDTO.setNickName(userInfo.getNickname());
+            userDTO.setAvatar(userInfo.getAvatar());
+        }
         UserContext.saveUser(userDTO);
-
         //5.构造JWT令牌
         String token = JwtUtil.generateToken(userDTO);
 
-
         //6. 缓存用户信息到redis
         String key = RedisCacheConstant.USER_INFO_KEY_PREFIX + user.getId();
-        LambdaQueryWrapper<UserInfo> queryWrapper = Wrappers.lambdaQuery();
-        queryWrapper.eq(UserInfo::getUserId,user.getId());
-        UserInfo userInfo = userInfoUserMapper.selectOne(queryWrapper);
 
 
         UserVO userVO = new UserVO();
         userVO.setUserId(user.getId());
         userVO.setUsername(user.getUsername());
-        userVO.setNickname(userInfo.getNickname());
-        userVO.setAvatar(userInfo.getAvatar());
+        if(userInfo!=null){
+            userVO.setNickname(userInfo.getNickname());
+            userVO.setAvatar(userInfo.getAvatar());
+        }
         customObjectRedisTemplate.opsForValue().set(
                 key,
                 userVO,

@@ -7,7 +7,7 @@ import com.cc.talkcommon.utils.ConvertUtils;
 import com.cc.talkpojo.result.CategoryUpResult;
 import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.CategoryDTO;
-import com.cc.talkpojo.dto.PageCategoryDTO;
+import com.cc.talkpojo.dto.CategoryPageDTO;
 import com.cc.talkpojo.entity.Book;
 import com.cc.talkpojo.entity.BookCategory;
 import com.cc.talkserver.admin.mapper.BookAdminMapper;
@@ -44,22 +44,22 @@ public class CategoryAdminServiceImpl extends ServiceImpl<CategoryAdminMapper, B
 
     /**
      * 分类分页查询
-     * @param pageCategoryDTO
+     * @param categoryPageDTO
      * @return
      */
     @Override
-    public PageResult getCategoryPage(PageCategoryDTO pageCategoryDTO) {
-        if(pageCategoryDTO==null || pageCategoryDTO.getPageNum() < 1 || pageCategoryDTO.getPageSize() < 1){
+    public PageResult getCategoryPage(CategoryPageDTO categoryPageDTO) {
+        if(categoryPageDTO ==null || categoryPageDTO.getPageNum() < 1 || categoryPageDTO.getPageSize() < 1){
             throw new BaseException("分页参数有误!");
         }
 
         //1. 开始分页
-        PageHelper.startPage(pageCategoryDTO.getPageNum(),pageCategoryDTO.getPageSize());
+        PageHelper.startPage(categoryPageDTO.getPageNum(), categoryPageDTO.getPageSize());
 
         //2. 分页查询条件
         LambdaQueryWrapper<BookCategory> queryWrapper = new LambdaQueryWrapper<>();
-        if(pageCategoryDTO.getName()!= null && !pageCategoryDTO.getName().trim().isEmpty()){
-            queryWrapper.like(BookCategory::getName,pageCategoryDTO.getName());
+        if(categoryPageDTO.getName()!= null && !categoryPageDTO.getName().trim().isEmpty()){
+            queryWrapper.like(BookCategory::getName, categoryPageDTO.getName());
         }
 
         //3. 执行分页查询

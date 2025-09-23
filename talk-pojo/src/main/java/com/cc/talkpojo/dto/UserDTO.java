@@ -25,6 +25,15 @@ public class UserDTO implements Serializable {
      */
     private String username;
 
+    /**
+     * 昵称
+     */
+    private String nickName;
+
+    /**
+     * 昵称
+     */
+    private String avatar;
 
     /**
      * 密码

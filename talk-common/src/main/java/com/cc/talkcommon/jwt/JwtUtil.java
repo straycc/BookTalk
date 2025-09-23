@@ -18,6 +18,8 @@ public class JwtUtil {
         Map<String, Object> payload = new HashMap<>();
         payload.put("userId", userDTO.getId());
         payload.put("username", userDTO.getUsername());
+        payload.put("nickName", userDTO.getNickName());
+        payload.put("avatar", userDTO.getAvatar());
         payload.put("status", userDTO.getStatus());
         payload.put("role", userDTO.getRole());
 
@@ -61,12 +63,16 @@ public class JwtUtil {
         String username = jwt.getPayload("username").toString();
         int status = Integer.parseInt(jwt.getPayload("status").toString());
         String role = jwt.getPayload("role").toString();
+        String avatar = jwt.getPayload("avatar").toString();
+        String nickName = jwt.getPayload("nickName").toString();
         if (status != 1) {
             throw new BaseException("账号已被禁用，请联系管理员");
         }
         return UserDTO.builder()
                 .id(userId)
                 .username(username)
+                .nickName(nickName)
+                .avatar(avatar)
                 .status(status)
                 .role(role)
                 .build();

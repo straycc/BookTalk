@@ -5,7 +5,7 @@
     <delete id="deleteByUserAndTarget">
         DELETE FROM like_record
         WHERE user_id = #{userId}
-          AND target_type  = #{targetType}
+          AND target_type  = #{likeTargetType}
           AND target_id = #{targetId}
     </delete>
 

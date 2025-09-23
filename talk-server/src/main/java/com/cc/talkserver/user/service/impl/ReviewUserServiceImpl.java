@@ -205,7 +205,7 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
                     vo.setUpdateTime(review.getUpdateTime());
 
                     // 查用户信息
-                    vo.setUsername(UserContext.getUser().getUsername());
+                    vo.setNickName(UserContext.getUser().getUsername());
 //                    User user = userMapper.selectById(review.getUserId());
 //                    if (user != null) {
 //                        vo.setUsername(user.getUsername());
@@ -237,11 +237,14 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
         BookReviewVO bookReviewVO = new BookReviewVO();
         BeanUtil.copyProperties(bookReview, bookReviewVO);
         // 查询书评用户信息
-        UserInfo userInfo = userInfoUserMapper.selectById(bookReview.getUserId());
-        bookReviewVO.setUserId(userInfo.getUserId());
-        bookReviewVO.setUsername(userInfo.getNickname());
-        bookReviewVO.setAvatarUrl(userInfo.getAvatar());
-
+        UserInfo userInfo = userInfoUserMapper.selectOne(
+                new LambdaQueryWrapper<UserInfo>().eq(UserInfo::getUserId,bookReview.getUserId())
+        );
+        bookReviewVO.setUserId(bookReview.getUserId());
+        if(userInfo != null){
+            bookReviewVO.setNickName(userInfo.getNickname());
+            bookReviewVO.setAvatarUrl(userInfo.getAvatar());
+        }
         return bookReviewVO;
     }
 

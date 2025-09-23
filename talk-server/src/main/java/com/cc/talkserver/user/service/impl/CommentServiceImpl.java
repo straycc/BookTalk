@@ -9,6 +9,7 @@ import com.cc.talkcommon.exception.BaseException;
 import com.cc.talkcommon.utils.CheckPageParam;
 import com.cc.talkcommon.utils.ConvertUtils;
 import com.cc.talkcommon.utils.EnumUtil;
+import com.cc.talkpojo.dto.CommentDTO;
 import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.CommentPageDTO;
 import com.cc.talkpojo.entity.BookReview;
@@ -61,37 +62,37 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
         // 以后需要支持更多字段就加这里
     }
 
-    @Qualifier("customObjectRedisTemplate")
-    @Autowired
-    private RedisTemplate customObjectRedisTemplate;
-    @Autowired
+    @Resource
+    private RedisTemplate<String,Object> customObjectRedisTemplate;
+
+    @Resource
     private ReviewUserMapper reviewUserMapper;
-    @Autowired
+    @Resource
     private UserInfoUserMapper userInfoUserMapper;
 
 
     /**
      * 发表评论
      * @param targetId
-     * @param commentVO
+     * @param commentDTO
      */
     @Override
-    public void commentPublish(Long targetId, CommentVO commentVO) {
+    public void commentPublish(Long targetId, CommentDTO commentDTO) {
 
         // 检查参数
-        if(targetId == null || commentVO == null || !targetId.equals(commentVO.getTargetId())){
+        if(targetId == null || commentDTO == null || !targetId.equals(commentDTO.getTargetId())){
             throw new BaseException(BusinessConstant.PARAM_ERROR);
         }
-        if (commentVO.getContent() == null || commentVO.getContent().trim().isEmpty()) {
+        if (commentDTO.getContent() == null || commentDTO.getContent().trim().isEmpty()) {
             throw new BaseException(BusinessConstant.COMMENT_ISEMPTY);
         }
 
         // 检查目标枚举类型,并获取目标枚举值
-         TargetType targetType = EnumUtil.fromCode(TargetType.class,commentVO.getTargetType());
+         TargetType targetType = EnumUtil.fromCode(TargetType.class,commentDTO.getTargetType());
 
         // 检查父级评论（为空：直接评论书评， 不为空：是否存在）
-        if(commentVO.getParentId()!=null){
-            Comment  parent = commentUserMapper.selectById(commentVO.getParentId());
+        if(commentDTO.getParentId()!=null){
+            Comment  parent = commentUserMapper.selectById(commentDTO.getParentId());
             if(parent==null){
                 throw new BaseException(BusinessConstant.PARENTCOMMENT_NOTEXIST);
             }
@@ -100,9 +101,9 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
         //存入数据仓库
         Comment comment = Comment.builder()
                 .targetId(targetId)
-                .content(commentVO.getContent())
+                .content(commentDTO.getContent())
                 .targetType(targetType)
-                .parentId(commentVO.getParentId())
+                .parentId(commentDTO.getParentId())
                 .userId(UserContext.getUser().getId())
                 .createTime(LocalDateTime.now())
                 .build();
@@ -143,7 +144,8 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
      */
     @Override
     public PageResult<CommentVO> getUserAllComments(Long userId, CommentPageDTO commentPageDTO) {
-        if(userId==null || CheckPageParam.checkPageDTO(commentPageDTO) || !userId.equals(commentPageDTO.getUserId())){
+        CheckPageParam.checkPageDTO(commentPageDTO);
+        if(userId==null  || !userId.equals(commentPageDTO.getUserId())){
             throw new BaseException(BusinessConstant.PARAM_ERROR);
         }
 
@@ -230,7 +232,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
                 .map(
                         comment ->{
                              CommentVO commentVO = ConvertUtils.convert(comment, CommentVO.class);
-                             String key = RedisCacheConstant.USER_INFO_KEY_PREFIX + commentVO.getId();
+                             String key = RedisCacheConstant.USER_INFO_KEY_PREFIX + commentVO.getUserId();
                              UserVO userInfo = (UserVO) customObjectRedisTemplate.opsForValue().get(key);
                              if (userInfo == null) {
                                  UserInfo user = userInfoUserMapper.selectOne(

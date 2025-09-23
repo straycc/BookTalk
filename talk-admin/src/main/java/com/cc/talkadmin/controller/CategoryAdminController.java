@@ -6,7 +6,7 @@ import com.cc.talkcommon.result.Result;
 import com.cc.talkpojo.result.CategoryUpResult;
 import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.CategoryDTO;
-import com.cc.talkpojo.dto.PageCategoryDTO;
+import com.cc.talkpojo.dto.CategoryPageDTO;
 import com.cc.talkserver.admin.service.CategoryAdminService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -40,9 +40,9 @@ public class CategoryAdminController {
      */
     @PostMapping("/page")
     @ApiOperation("获取分类列表")
-    public Result<PageResult> getCategoryPage(@RequestBody PageCategoryDTO  pageCategoryDTO) {
+    public Result<PageResult> getCategoryPage(@RequestBody CategoryPageDTO categoryPageDTO) {
 
-        PageResult pageResult = categoryService.getCategoryPage(pageCategoryDTO);
+        PageResult pageResult = categoryService.getCategoryPage(categoryPageDTO);
         return Result.success(pageResult);
     }
 

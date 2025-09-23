@@ -1,13 +1,11 @@
 package com.cc.talkpojo.dto;
 
 import lombok.Data;
-import lombok.extern.java.Log;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Data
-public class PageBookDTO implements PageDTO{
+public class BookPageDTO implements PageDTO{
 
     /** 页面号*/
     private Integer pageNum;

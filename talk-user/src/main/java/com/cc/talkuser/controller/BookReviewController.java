@@ -6,6 +6,7 @@ import com.cc.talkpojo.dto.BookReviewDTO;
 import com.cc.talkpojo.dto.PageReviewDTO;
 import com.cc.talkpojo.vo.BookReviewVO;
 import com.cc.talkserver.user.service.ReviewUserService;
+import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
@@ -20,6 +21,7 @@ import javax.annotation.Resource;
  */
 @RestController
 @RequestMapping("user/bookReview")
+@Api(tags = "书评相关接口")
 public class BookReviewController {
 
     @Resource
@@ -85,7 +87,7 @@ public class BookReviewController {
     @GetMapping("/detail/{bookReviewId}")
     public Result<BookReviewVO> bookReviewDetail(@PathVariable("bookReviewId") Long bookReviewId) {
         BookReviewVO bookReviewVO  = reviewUserService.getDetail(bookReviewId);
-        return Result.success();
+        return Result.success(bookReviewVO);
     }
 
 

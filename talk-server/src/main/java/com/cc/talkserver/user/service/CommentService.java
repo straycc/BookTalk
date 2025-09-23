@@ -1,5 +1,6 @@
 package com.cc.talkserver.user.service;
 
+import com.cc.talkpojo.dto.CommentDTO;
 import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.CommentPageDTO;
 import com.cc.talkpojo.entity.Comment;
@@ -22,9 +23,9 @@ public interface CommentService extends IService<Comment> {
     /**
      * 发布评论
      * @param targetId
-     * @param commentVO
+     * @param commentDTO
      */
-    void commentPublish(Long targetId, CommentVO commentVO);
+    void commentPublish(Long targetId, CommentDTO commentDTO);
 
 
     /**

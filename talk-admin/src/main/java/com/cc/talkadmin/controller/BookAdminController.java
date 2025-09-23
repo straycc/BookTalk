@@ -4,7 +4,7 @@ package com.cc.talkadmin.controller;
 import com.cc.talkcommon.result.Result;
 import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.BookDTO;
-import com.cc.talkpojo.dto.PageBookDTO;
+import com.cc.talkpojo.dto.BookPageDTO;
 import com.cc.talkpojo.vo.BookVO;
 import com.cc.talkserver.admin.service.BookAdminService;
 import io.swagger.annotations.Api;
@@ -66,7 +66,7 @@ public class BookAdminController {
      */
     @ApiOperation("图书信息分页查询")
     @PostMapping("/page")
-    public Result<PageResult<BookVO>> pageBook(@RequestBody PageBookDTO pageDTO) {
+    public Result<PageResult<BookVO>> pageBook(@RequestBody BookPageDTO pageDTO) {
         log.info("图书信息分页查询....");
         PageResult<BookVO> pageResult = bookService.getBookPage(pageDTO);
         return Result.success(pageResult);

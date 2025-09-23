@@ -90,6 +90,17 @@ public class BusinessConstant {
     public static final  String LIKE_TYPE_REVIEW = "bookReview";
     public static final  String LIKE_TYPE_COMMENT = "comment";
 
+    //书单相关内容
+    public static final  String EMPTY_BOOKLIST= "不允许建立空书单";
+    public static final  String CREAT_BOOKLIST_ERROR= "建立书单失败";
+    public static final  String BOOKLIST_NOTEXIST= "书单不存在";
+    public static final  String NOT_BOOKLIST_OWER= "不能操作他人书单";
+    public static final  String SQL_BOOK_LIST_ID = "book_list_id";
+    public static final  String BOOKLIST_REPEAT_BOOK= "不能重复添加书籍";
+    public static final  String BOOKLIST_NOTEXIST_BOOK= "书单中不存在该书籍";
+
+
+
 
 
 }

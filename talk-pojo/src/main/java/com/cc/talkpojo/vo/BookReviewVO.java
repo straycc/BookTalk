@@ -17,7 +17,7 @@ public class BookReviewVO {
 
     // 作者信息
     private Long userId;
-    private String username;
+    private String nickName;
     private String avatarUrl;
 
     // 时间信息

@@ -4,22 +4,18 @@ package com.cc.talkpojo.dto;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.List;
 
 @Data
 public class BookListDTO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 书单ID
-     */
-    private Long id;
-
+    private Long bookListId;
     /**
      * 创建者ID
      */
     private Long userId;
-
 
     /**
      * 书单标题
@@ -41,4 +37,14 @@ public class BookListDTO implements Serializable {
      */
     private Integer visibility;
 
+    /**
+     * 书单id列表
+     */
+    private List<Long> bookIdList;
+
+
+    /**
+     * 单个书籍id
+     */
+    private Long bookId;
 }

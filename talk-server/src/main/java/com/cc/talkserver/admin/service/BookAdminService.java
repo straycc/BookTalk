@@ -3,7 +3,7 @@ package com.cc.talkserver.admin.service;
 import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.result.UploadResult;
 import com.cc.talkpojo.dto.BookDTO;
-import com.cc.talkpojo.dto.PageBookDTO;
+import com.cc.talkpojo.dto.BookPageDTO;
 import com.cc.talkpojo.entity.Book;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.cc.talkpojo.vo.BookVO;
@@ -37,7 +37,7 @@ public interface BookAdminService extends IService<Book> {
      * @param pageDTO
      * @return
      */
-    PageResult<BookVO> getBookPage(PageBookDTO pageDTO);
+    PageResult<BookVO> getBookPage(BookPageDTO pageDTO);
 
 
     /**

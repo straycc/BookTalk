@@ -3,7 +3,7 @@ package com.cc.talkserver.user.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.BookShowDTO;
-import com.cc.talkpojo.dto.PageBookDTO;
+import com.cc.talkpojo.dto.BookPageDTO;
 import com.cc.talkpojo.dto.PageSearchDTO;
 import com.cc.talkpojo.entity.Book;
 import com.cc.talkpojo.vo.BookVO;
@@ -31,10 +31,10 @@ public interface BookUserService extends IService<Book> {
 
     /**
      * 书籍概览分页查询
-     * @param pageBookDTO
+     * @param bookPageDTO
      * @return
      */
-    PageResult<BookShowDTO> getBookPage(PageBookDTO pageBookDTO);
+    PageResult<BookShowDTO> getBookPage(BookPageDTO bookPageDTO);
 
     /**
      * 获取书籍详情
@@ -54,13 +54,13 @@ public interface BookUserService extends IService<Book> {
      * @param id
      * @return
      */
-    PageResult<BookShowDTO> getPageByTag(Long id,PageBookDTO pageBookDTO);
+    PageResult<BookShowDTO> getPageByTag(Long id, BookPageDTO bookPageDTO);
 
 
     /**
      * 查询缓存热门数据
-     * @param pageBookDTO
+     * @param bookPageDTO
      * @return
      */
-    PageResult<BookShowDTO> getHotBook(PageBookDTO pageBookDTO);
+    PageResult<BookShowDTO> getHotBook(BookPageDTO bookPageDTO);
 }

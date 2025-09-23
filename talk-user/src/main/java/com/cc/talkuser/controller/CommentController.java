@@ -3,6 +3,7 @@ package com.cc.talkuser.controller;
 
 import com.cc.talkcommon.constant.BusinessConstant;
 import com.cc.talkcommon.result.Result;
+import com.cc.talkpojo.dto.CommentDTO;
 import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.CommentPageDTO;
 import com.cc.talkpojo.vo.CommentVO;
@@ -33,12 +34,12 @@ public class CommentController {
 
     @ApiOperation("发布评论")
     @PostMapping("/publish/{targetId}")
-    public Result<Object> publish(@PathVariable("targetId") Long targetId, @RequestBody CommentVO commentVO) {
-        commentService.commentPublish(targetId,commentVO);
+    public Result<Object> publish(@PathVariable("targetId") Long targetId, @RequestBody CommentDTO commentDTO) {
+        commentService.commentPublish(targetId,commentDTO);
         return Result.success(BusinessConstant.PUBLISH_COMMENT_SUCCESS);
     }
 
-    @ApiOperation("删除书评")
+    @ApiOperation("删除评论")
     @PostMapping("/delete/{commentId}")
     public Result<Object> deleteComment(@PathVariable("commentId") Long commentId) {
         commentService.deleteComment(commentId);
@@ -46,9 +47,9 @@ public class CommentController {
     }
 
     @ApiOperation("查询用户所有评论")
-    @GetMapping("/user/{userId}")
+    @PostMapping("/user/{userId}")
     public Result<PageResult<CommentVO>> userAllComments(@PathVariable("userId") Long userId,
-                                          @ModelAttribute CommentPageDTO commentPageDTO) {
+                                          @RequestBody CommentPageDTO commentPageDTO) {
         PageResult<CommentVO> pageResult = commentService.getUserAllComments(userId, commentPageDTO);
         return Result.success(pageResult);
     }
