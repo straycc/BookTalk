@@ -5,11 +5,14 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.cc.talkcommon.constant.BusinessConstant;
 import com.cc.talkcommon.constant.RedisCacheConstant;
 import com.cc.talkcommon.context.UserContext;
+import com.cc.talkcommon.event.NotificationEventPublisher;
+import com.cc.talkcommon.event.request.NotificationRequest;
 import com.cc.talkcommon.exception.BaseException;
 import com.cc.talkcommon.utils.CheckPageParam;
 import com.cc.talkcommon.utils.ConvertUtils;
 import com.cc.talkcommon.utils.EnumUtil;
 import com.cc.talkpojo.dto.CommentDTO;
+import com.cc.talkpojo.dto.UserDTO;
 import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.CommentPageDTO;
 import com.cc.talkpojo.entity.BookReview;
@@ -69,6 +72,8 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
     private ReviewUserMapper reviewUserMapper;
     @Resource
     private UserInfoUserMapper userInfoUserMapper;
+    @Resource
+    private NotificationEventPublisher notificationEventPublisher;
 
 
     /**
@@ -109,6 +114,9 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
                 .build();
 
         commentUserMapper.insert(comment);
+
+        // 发布评论通知
+        publishCommentNotification(comment, targetType);
     }
 
 
@@ -300,6 +308,101 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
 
         // 返回一级评论列表（一级评论下挂载了子评论）
         return firstCommentsVO;
+    }
+
+    /**
+     * 发布评论通知
+     * @param comment 评论内容
+     * @param targetType 目标类型
+     */
+    private void publishCommentNotification(Comment comment, TargetType targetType) {
+        try {
+            UserDTO currentUser = UserContext.getUser();
+            if (currentUser == null) {
+                return;
+            }
+
+            // 根据不同的目标类型发布通知
+            switch (targetType) {
+                case BOOKREVIEW:
+                    // 评论书评，通知书评作者
+                    publishBookReviewCommentNotification(comment, currentUser);
+                    break;
+                case COMMENT:
+                    // 回复评论，通知被回复的评论作者
+                    publishReplyCommentNotification(comment, currentUser);
+                    break;
+                default:
+                    // 其他类型暂不发送通知
+                    break;
+            }
+        } catch (Exception e) {
+            // 通知发送失败不影响主流程
+        }
+    }
+
+    /**
+     * 发布书评评论通知
+     * @param comment 评论内容
+     * @param currentUser 当前用户
+     */
+    private void publishBookReviewCommentNotification(Comment comment, UserDTO currentUser) {
+        // 查询书评信息
+        BookReview bookReview = reviewUserMapper.selectById(comment.getTargetId());
+        if (bookReview == null || bookReview.getUserId().equals(currentUser.getId())) {
+            // 书评不存在或者是自己评论自己的书评，不发送通知
+            return;
+        }
+
+        // 创建评论通知请求
+        NotificationRequest request = NotificationRequest.comment(
+                bookReview.getUserId(),               // 接收通知的用户ID（书评作者）
+                comment.getTargetId(),               // 目标ID（书评ID）
+                NotificationRequest.TargetType.BOOK_REVIEW, // 目标类型
+                comment.getContent(),               // 评论内容
+                currentUser.getId(),                 // 评论者ID
+                currentUser.getNickName(),           // 评论者昵称
+                currentUser.getAvatar()              // 评论者头像
+        );
+
+        // 发布评论通知
+        notificationEventPublisher.publishCommentEvent(request);
+    }
+
+    /**
+     * 发布回复评论通知
+     * @param comment 评论内容
+     * @param currentUser 当前用户
+     */
+    private void publishReplyCommentNotification(Comment comment, UserDTO currentUser) {
+        if (comment.getParentId() == null) {
+            return;
+        }
+
+        // 查询父评论
+        Comment parentComment = commentUserMapper.selectById(comment.getParentId());
+        if (parentComment == null || parentComment.getUserId().equals(currentUser.getId())) {
+            // 父评论不存在或者是回复自己的评论，不发送通知
+            return;
+        }
+
+        // 创建回复通知请求
+        NotificationRequest request = NotificationRequest.builder()
+                .userId(parentComment.getUserId())    // 接收通知的用户ID（被回复的用户）
+                .type(NotificationRequest.NotificationType.REPLY) // 通知类型为回复
+                .targetId(comment.getId())            // 目标ID（当前评论ID）
+                .targetType(NotificationRequest.TargetType.COMMENT) // 目标类型为评论
+                .sender(new NotificationRequest.SenderInfo(
+                        currentUser.getId(),          // 回复者ID
+                        currentUser.getNickName(),    // 回复者昵称
+                        currentUser.getAvatar()       // 回复者头像
+                ))
+                .title("收到新回复")
+                .content(comment.getContent())       // 回复内容
+                .build();
+
+        // 发布回复通知
+        notificationEventPublisher.publishReplyEvent(request);
     }
 
 

@@ -22,7 +22,7 @@ public class LikeRecordDTO {
     /**
      * 点赞对象类型
      */
-    private String likeTargetType; // 可选值  BOOKREVIEW, COMMNET, BOOKLIST
+    private String likeTargetType; // 可选值  BOOK_REVIEW, COMMNET, BOOKLIST
 
     /**
      * 点赞用户ID

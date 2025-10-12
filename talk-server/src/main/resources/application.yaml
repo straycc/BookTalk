@@ -19,6 +19,13 @@ spring:
     password: ${REDIS_PASSWORD}   # 如果没有密码，这行可以删除或者留空
     database: 6
 
+  rabbitmq:
+    host: 192.168.72.128
+    port: 5672
+    username: bookTalk
+    password: bookTalk
+    virtualHost: /bookTalk
+
 redisson:
   config: classpath:redisson.yml
 

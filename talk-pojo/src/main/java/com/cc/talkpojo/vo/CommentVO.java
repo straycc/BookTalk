@@ -23,7 +23,7 @@ public class CommentVO {
     private Long targetId;
 
     /**
-     * 评论目标类型: BOOKREVIEW, COMMENT, BOOKLIST
+     * 评论目标类型: BOOK_REVIEW, COMMENT, BOOKLIST
      */
     private String  targetType;
 

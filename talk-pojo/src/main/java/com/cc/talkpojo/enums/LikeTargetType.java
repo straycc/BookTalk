@@ -8,7 +8,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum LikeTargetType {
 
-    BOOKREVIEW( "bookReview"),
+    BOOK_REVIEW( "bookReview"),
     COMMENT("comment"),
     BOOKLIST("bookList");
 

@@ -6,9 +6,12 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.cc.talkcommon.constant.BusinessConstant;
 import com.cc.talkcommon.constant.RedisCacheConstant;
 import com.cc.talkcommon.context.UserContext;
+import com.cc.talkcommon.event.NotificationEventPublisher;
+import com.cc.talkcommon.event.request.NotificationRequest;
 import com.cc.talkcommon.exception.BaseException;
 import com.cc.talkcommon.utils.CheckPageParam;
 import com.cc.talkcommon.utils.EnumUtil;
+import com.cc.talkpojo.dto.UserDTO;
 import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.LikePageDTO;
 import com.cc.talkpojo.dto.LikeRecordDTO;
@@ -23,7 +26,6 @@ import com.github.pagehelper.PageInfo;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -62,6 +64,9 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
     private ReviewUserMapper reviewUserMapper;
     @Resource
     private CommentUserMapper commentUserMapper;
+
+    @Resource
+    private NotificationEventPublisher notificationEventPublisher;
 
 
     /**
@@ -118,6 +123,9 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
             Long id = likeRecordMapper.selectByUserTaeget(likeRecord.getUserId(), likeRecord.getTargetType(), likeRecord.getTargetId());
             if(id == null){
                 likeRecordMapper.insert(likeRecord);
+
+                // 发布点赞通知
+                publishLikeNotification(likeRecordDTO, targetType);
             }
         }
         else{
@@ -307,6 +315,80 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
     }
 
 
+
+    /**
+     * 发布点赞通知
+     * @param likeRecordDTO 点赞记录
+     * @param targetType 目标类型
+     */
+    private void publishLikeNotification(LikeRecordDTO likeRecordDTO, LikeTargetType targetType) {
+        try {
+            // 获取被点赞内容的作者ID
+            Long targetUserId = getTargetUserId(likeRecordDTO.getTargetId(), targetType);
+            if (targetUserId == null || targetUserId.equals(likeRecordDTO.getUserId())) {
+                // 找不到作者或者是自己给自己点赞，不发送通知
+                return;
+            }
+
+            // 获取当前用户信息
+            UserDTO currentUser = UserContext.getUser();
+            if (currentUser == null) {
+                return;
+            }
+
+            // 转换目标类型
+            String notificationTargetType;
+            switch (targetType) {
+                case BOOK_REVIEW:
+                    notificationTargetType = NotificationRequest.TargetType.BOOK_REVIEW;
+                    break;
+                case COMMENT:
+                    notificationTargetType = NotificationRequest.TargetType.COMMENT;
+                    break;
+                default:
+                    // 其他类型暂不发送通知
+                    return;
+            }
+
+            // 创建点赞通知请求
+            NotificationRequest request = NotificationRequest.like(
+                    targetUserId,                    // 接收通知的用户ID
+                    likeRecordDTO.getTargetId(),     // 被点赞的内容ID
+                    notificationTargetType,         // 目标类型
+                    currentUser.getId(),             // 点赞者ID
+                    currentUser.getNickName(),       // 点赞者昵称
+                    currentUser.getAvatar()          // 点赞者头像
+            );
+
+            // 发布通知
+            notificationEventPublisher.publishLikeEvent(request);
+        } catch (Exception e) {
+            // 通知发送失败不影响主流程
+            // 可以考虑记录日志
+        }
+    }
+
+    /**
+     * 获取被点赞内容的作者ID
+     * @param targetId 目标ID
+     * @param targetType 目标类型
+     * @return 作者ID
+     */
+    private Long getTargetUserId(Long targetId, LikeTargetType targetType) {
+        switch (targetType) {
+            case BOOK_REVIEW:
+                BookReview review = reviewUserMapper.selectById(targetId);
+                return review != null ? review.getUserId() : null;
+            case COMMENT:
+                Comment comment = commentUserMapper.selectById(targetId);
+                return comment != null ? comment.getUserId() : null;
+            case BOOKLIST:
+                BookList bookList = bookListMapper.selectById(targetId);
+                return bookList != null ? bookList.getUserId() : null;
+            default:
+                return null;
+        }
+    }
 
     /**
      * 根据 ID 列表批量查询并转换成 Map
