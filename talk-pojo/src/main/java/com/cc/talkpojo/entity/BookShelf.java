@@ -1,15 +1,16 @@
 package com.cc.talkpojo.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.TableId;
 import java.io.Serializable;
 
-import com.cc.talkpojo.enums.TargetType;
-import lombok.Builder;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 /**
@@ -18,14 +19,15 @@ import lombok.experimental.Accessors;
  * </p>
  *
  * @author cc
- * @since 2025-09-08
+ * @since 2025-10-12
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
 @Accessors(chain = true)
-@TableName("comment")
-@Builder
-public class Comment implements Serializable {
+@TableName("book_shelf")
+@AllArgsConstructor
+@NoArgsConstructor
+public class BookShelf implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -33,35 +35,28 @@ public class Comment implements Serializable {
     private Long id;
 
     /**
-     * 评论目标ID
+     * 用户ID
      */
-    private Long targetId;
-
-    /**
-     * 评论目标类型:
-     */
-    private TargetType targetType;
-
-    /**
-     * 父评论ID，空表示直接评论书评
-     */
-    private Long parentId;
-
-    /**
-     * 评论人ID
-     */
+    @TableField("user_id")
     private Long userId;
 
+    /**
+     * 书籍ID
+     */
+    @TableField("book_id")
+    private Long bookId;
 
     /**
-     * 评论内容
+     * 状态: WANT_TO_READ-想读, READING-在读, READ-读完
      */
-    private String content;
+    @TableField("status")
+    private String status;
 
-    /**
-     * 创建时间
-     */
+    @TableField("create_time")
     private LocalDateTime createTime;
+
+    @TableField("update_time")
+    private LocalDateTime updateTime;
 
 
 }

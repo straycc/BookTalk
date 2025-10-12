@@ -10,6 +10,8 @@ import com.cc.talkpojo.vo.CommentVO;
 import com.cc.talkserver.user.service.CommentService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -28,6 +30,7 @@ import java.util.List;
 @Api(tags = "评论相关接口")
 public class CommentController {
 
+    private static final Logger log = LoggerFactory.getLogger(CommentController.class);
     @Resource
     private CommentService commentService;
 
@@ -56,7 +59,8 @@ public class CommentController {
 
     @ApiOperation("查询书评所有评论")
     @GetMapping("/bookReview/{bookReviewId}")
-    public Result<Object> bookReviewAllComments(@PathVariable("bookReviewId") Long bookReviewId) {
+    public Result<List<CommentVO>> bookReviewAllComments(@PathVariable("bookReviewId") Long bookReviewId) {
+        log.info("查询书评所有评论:{}", bookReviewId);
         List<CommentVO> commentVOList = commentService.bookReviewAllCommments(bookReviewId);
         return Result.success(commentVOList);
     }

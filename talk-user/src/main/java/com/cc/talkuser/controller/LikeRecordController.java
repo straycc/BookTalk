@@ -38,7 +38,7 @@ public class LikeRecordController {
     @ApiOperation("用户点击点赞")
     @PostMapping("/likeOrNot")
     public Result<Object> clickLike(@RequestBody LikeRecordDTO likeRecordDTO) {
-        // targetType 可选值：BOOKREVIEW, COMMENT, BOOKLIST
+        // targetType 可选值：bookReview, comment, bookList
         likeRecordService.clickLike(likeRecordDTO);
         return Result.success();
     }

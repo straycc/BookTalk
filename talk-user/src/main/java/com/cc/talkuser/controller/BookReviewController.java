@@ -8,6 +8,8 @@ import com.cc.talkpojo.vo.BookReviewVO;
 import com.cc.talkserver.user.service.ReviewUserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 
@@ -24,6 +26,7 @@ import javax.annotation.Resource;
 @Api(tags = "书评相关接口")
 public class BookReviewController {
 
+    private static final Logger log = LoggerFactory.getLogger(BookReviewController.class);
     @Resource
     private ReviewUserService reviewUserService;
 
@@ -86,6 +89,7 @@ public class BookReviewController {
     @ApiOperation("查询书评详情")
     @GetMapping("/detail/{bookReviewId}")
     public Result<BookReviewVO> bookReviewDetail(@PathVariable("bookReviewId") Long bookReviewId) {
+        log.info("查询书评详情：{}", bookReviewId);
         BookReviewVO bookReviewVO  = reviewUserService.getDetail(bookReviewId);
         return Result.success(bookReviewVO);
     }

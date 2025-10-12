@@ -235,6 +235,7 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
         }
         BookReview bookReview = reviewUserMapper.selectById(bookReviewId);
         BookReviewVO bookReviewVO = new BookReviewVO();
+        bookReviewVO.setBookReviewId(bookReviewId);
         BeanUtil.copyProperties(bookReview, bookReviewVO);
         // 查询书评用户信息
         UserInfo userInfo = userInfoUserMapper.selectOne(

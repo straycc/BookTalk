@@ -24,10 +24,12 @@ public class BookReviewVO {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
-    // 评论状态
+    // 书评状态
     private Integer status;
 
     // 当前用户是否点赞
     private Boolean likedByCurrentUser;
+
+    // 评
 }
 

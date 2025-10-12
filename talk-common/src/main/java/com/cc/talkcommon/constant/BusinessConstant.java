@@ -99,6 +99,19 @@ public class BusinessConstant {
     public static final  String BOOKLIST_REPEAT_BOOK= "不能重复添加书籍";
     public static final  String BOOKLIST_NOTEXIST_BOOK= "书单中不存在该书籍";
 
+    //个人书架相关内容
+    public static final  String BOOK_SHELF_ALREADY_EXISTS= "书籍已在书架中";
+    public static final  String BOOK_SHELF_ITEM_NOT_EXIST= "书架项不存在或无权限操作";
+    public static final  String BOOK_SHELF_STATUS_INVALID= "无效的阅读状态";
+    public static final  String BOOK_SHELF_ADD_SUCCESS= "添加书籍到书架成功";
+    public static final  String BOOK_SHELF_REMOVE_SUCCESS= "从书架移除书籍成功";
+    public static final  String BOOK_SHELF_UPDATE_SUCCESS= "更新书架状态成功";
+
+    //书架状态常量
+    public static final  String BOOK_SHELF_STATUS_WANT_TO_READ= "WANT_TO_READ";
+    public static final  String BOOK_SHELF_STATUS_READING= "READING";
+    public static final  String BOOK_SHELF_STATUS_READ= "READ";
+
 
 
 

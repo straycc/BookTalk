@@ -213,7 +213,6 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
                         .eq(Comment::getTargetType, TargetType.BOOKREVIEW.getCode())
                         .isNull(Comment::getParentId)
                         .orderByDesc(Comment::getCreateTime)
-
         );
 
         // 查询所有子评论
@@ -257,7 +256,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
         List<CommentVO> childCommentsVO = childComments.stream()
                 .map(comment -> {
                         CommentVO commentVO = ConvertUtils.convert(comment, CommentVO.class);
-                        String key = RedisCacheConstant.USER_INFO_KEY_PREFIX + commentVO.getId();
+                        String key = RedisCacheConstant.USER_INFO_KEY_PREFIX + commentVO.getUserId();
                         UserVO userInfo = (UserVO) customObjectRedisTemplate.opsForValue().get(key);
                         if (userInfo == null) {
                             UserInfo user = userInfoUserMapper.selectOne(
