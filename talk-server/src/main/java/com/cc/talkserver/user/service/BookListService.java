@@ -68,7 +68,7 @@ public interface BookListService extends IService<BookList> {
      * 书单删除书籍
      * @param bookListId
      * @param bookListDTO
-     * @param bookListDTO1
+     *
      */
-    void deleteBook(Long bookListId, BookListDTO bookListDTO, BookListDTO bookListDTO1);
+    void deleteBook(Long bookListId, BookListDTO bookListDTO);
 }

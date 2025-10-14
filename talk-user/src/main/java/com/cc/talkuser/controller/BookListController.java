@@ -73,7 +73,7 @@ public class BookListController {
     @PostMapping("/myList")
     public Result<Object> myList(@RequestBody BookListPageDTO bookListPageDTO) {
         PageResult<BookListVO> bookList  = bookListService.myBookListPage(bookListPageDTO);
-        return Result.success();
+        return Result.success(bookList);
     }
 
     /**
@@ -102,7 +102,7 @@ public class BookListController {
     @ApiOperation("书单删除书籍")
     @DeleteMapping("/deleteOne/{bookListId}")
     public Result<Object> deleteOne(@PathVariable Long bookListId, @RequestBody BookListDTO bookListDTO) {
-        bookListService.deleteBook(bookListId,bookListDTO,bookListDTO);
+        bookListService.deleteBook(bookListId,bookListDTO);
         return Result.success();
     }
 

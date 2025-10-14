@@ -113,7 +113,7 @@ public class BookShelfServiceImpl extends ServiceImpl<BookShelfMapper, BookShelf
         queryWrapper.eq(BookShelf::getUserId, userId);
 
         // 状态筛选
-        if (StringUtils.hasText(queryDTO.getStatus())) {
+        if (StringUtils.hasText(queryDTO.getStatus()) && !"null".equals(queryDTO.getStatus())) {
             queryWrapper.eq(BookShelf::getStatus, queryDTO.getStatus());
         }
 
@@ -122,7 +122,7 @@ public class BookShelfServiceImpl extends ServiceImpl<BookShelfMapper, BookShelf
             queryWrapper.orderBy(true, "DESC".equals(queryDTO.getSortOrder()),
                                BookShelf::getCreateTime);
         } else if ("BOOK_NAME".equals(queryDTO.getSortBy())) {
-            // 需要关联书籍表排序，这里简化处理
+            // TODO 后续修改实现
             queryWrapper.orderBy(true, "DESC".equals(queryDTO.getSortOrder()),
                                BookShelf::getCreateTime);
         }
@@ -223,7 +223,7 @@ public class BookShelfServiceImpl extends ServiceImpl<BookShelfMapper, BookShelf
                       })
                       // 书名筛选
                       .filter(vo -> !StringUtils.hasText(bookNameFilter) ||
-                                   vo.getBookName().contains(bookNameFilter))
+                                   (vo.getBookName() != null && vo.getBookName().contains(bookNameFilter)))
                       .collect(Collectors.toList());
     }
 

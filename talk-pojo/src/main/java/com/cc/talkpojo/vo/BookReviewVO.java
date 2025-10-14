@@ -30,6 +30,8 @@ public class BookReviewVO {
     // 当前用户是否点赞
     private Boolean likedByCurrentUser;
 
-    // 评
+    // 评论数
+    private Integer commentCount;
+
 }
 

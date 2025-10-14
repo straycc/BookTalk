@@ -95,19 +95,4 @@ public class BookReviewController {
     }
 
 
-    /**
-     * 获取当前热度最高的书评（根据评论数量 + 点赞数量）
-     * @param bookId
-     * @return
-     */
-    //TODO 待实现
-    @ApiOperation("查询当前热度最高的书评")
-    @GetMapping("/hotReview/{bookId}")
-    public Result<BookReviewVO> bookReviewHotOne(@PathVariable("bookId") Long bookId) {
-        return Result.success();
-    }
-
-
-
-
 }

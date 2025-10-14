@@ -2,6 +2,7 @@ package com.cc.talkpojo.vo;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
@@ -11,7 +12,7 @@ import java.time.LocalDateTime;
  * @since 2025-10-12
  */
 @Data
-public class BookShelfVO {
+public class BookShelfVO implements Serializable {
 
     /**
      * 书架ID

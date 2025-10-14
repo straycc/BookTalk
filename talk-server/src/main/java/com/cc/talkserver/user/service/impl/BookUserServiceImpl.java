@@ -272,9 +272,11 @@ public class BookUserServiceImpl extends ServiceImpl<BookUserMapper, Book> imple
      * @param bookVO
      */
     private void fillCategoryName(BookVO bookVO) {
-        BookCategory bookCategory = categoryUserMapper.selectById(bookVO.getId());
-        if (bookCategory != null) {
-            bookVO.setCategoryName(bookCategory.getName());
+        if (bookVO.getCategoryId() != null) {
+            BookCategory bookCategory = categoryUserMapper.selectById(bookVO.getCategoryId());
+            if (bookCategory != null) {
+                bookVO.setCategoryName(bookCategory.getName());
+            }
         }
     }
 

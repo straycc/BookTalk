@@ -46,7 +46,7 @@ public class RabbitMQConfig {
      * 死信交换机
      */
     @Bean
-    public TopicExchange notificationDlxDxl() {
+    public TopicExchange notificationDlxExchange() {
         return new TopicExchange("notification.dlx.exchange", true, false);
     }
 
@@ -64,7 +64,7 @@ public class RabbitMQConfig {
     @Bean
     public Binding notificationDlxBinding() {
         return BindingBuilder.bind(notificationDlxQueue())
-                .to(notificationDlxDxl())
+                .to(notificationDlxExchange())
                 .with("notification.dlx.key");
     }
 
@@ -76,6 +76,35 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(notificationQueue())
                 .to(notificationExchange())
                 .with("notification.key");
+    }
+
+    /**
+     * WebSocket交换机
+     */
+    @Bean
+    public TopicExchange websocketExchange() {
+        return new TopicExchange("websocket.exchange", true, false);
+    }
+
+    /**
+     * WebSocket通知队列
+     */
+    @Bean
+    public Queue websocketNotificationQueue() {
+        return QueueBuilder.durable("websocket.notification.queue")
+                .ttl(5 * 60 * 1000) // 5分钟TTL
+                .maxLength(5000) // 最大队列长度
+                .build();
+    }
+
+    /**
+     * WebSocket通知队列绑定
+     */
+    @Bean
+    public Binding websocketNotificationBinding() {
+        return BindingBuilder.bind(websocketNotificationQueue())
+                .to(websocketExchange())
+                .with("websocket.notification.key");
     }
 
     /**

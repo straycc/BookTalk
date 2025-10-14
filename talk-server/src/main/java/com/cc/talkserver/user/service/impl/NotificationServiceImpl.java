@@ -55,11 +55,10 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
         // 保存到数据库
         this.save(notification);
 
-        // 转换为VO并推送WebSocket消息
-        NotificationVO notificationVO = convertToVO(notification);
-        pushNotificationViaWebSocket(notificationVO);
-
         log.info("通知记录创建成功: ID={}", notification.getId());
+
+        // 发送WebSocket消息到RabbitMQ，由专门的WebSocket消费者处理
+        publishWebSocketNotification(notification);
     }
 
     @Override
@@ -231,21 +230,32 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
     }
 
     /**
-     * 通过WebSocket推送新通知
-     * @param notificationVO 通知VO
+     * 发布WebSocket通知到RabbitMQ
+     * @param notification 通知实体
      */
-    private void pushNotificationViaWebSocket(NotificationVO notificationVO) {
+    private void publishWebSocketNotification(Notification notification) {
         try {
+            // 创建WebSocket消息
+            NotificationVO notificationVO = convertToVO(notification);
             WebSocketMessage<NotificationVO> message = WebSocketMessage.newNotification(
                     notificationVO.getUserId(), notificationVO);
 
-            // 使用WebSocket处理器发送消息
-            NotificationWebSocketHandler.sendMessageToUser(notificationVO.getUserId(), message);
+            // 发送到WebSocket专用的RabbitMQ队列
+            rabbitTemplate.convertAndSend(
+                "websocket.exchange",
+                "websocket.notification.key",
+                message,
+                msg -> {
+                    msg.getMessageProperties().setContentType("application/json");
+                    msg.getMessageProperties().setExpiration("300000"); // 5分钟过期
+                    return msg;
+                }
+            );
 
-            log.debug("WebSocket推送新通知成功: userId={}, notificationId={}",
-                    notificationVO.getUserId(), notificationVO.getId());
+            log.debug("WebSocket通知消息已发送到RabbitMQ: userId={}, notificationId={}",
+                    notification.getUserId(), notification.getId());
         } catch (Exception e) {
-            log.error("WebSocket推送新通知失败: userId={}", notificationVO.getUserId(), e);
+            log.error("发送WebSocket通知消息到RabbitMQ失败: userId={}", notification.getUserId(), e);
         }
     }
 
@@ -258,12 +268,21 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
             Long unreadCount = notificationMapper.countUnreadByUserId(userId);
             WebSocketMessage<Long> message = WebSocketMessage.unreadCountUpdate(userId, unreadCount);
 
-            // 使用WebSocket处理器发送消息
-            NotificationWebSocketHandler.sendMessageToUser(userId, message);
+            // 发送到WebSocket专用的RabbitMQ队列
+            rabbitTemplate.convertAndSend(
+                "websocket.exchange",
+                "websocket.notification.key",
+                message,
+                msg -> {
+                    msg.getMessageProperties().setContentType("application/json");
+                    msg.getMessageProperties().setExpiration("60000"); // 1分钟过期
+                    return msg;
+                }
+            );
 
-            log.debug("WebSocket推送未读数量更新成功: userId={}, unreadCount={}", userId, unreadCount);
+            log.debug("WebSocket未读数量更新消息已发送到RabbitMQ: userId={}, unreadCount={}", userId, unreadCount);
         } catch (Exception e) {
-            log.error("WebSocket推送未读数量更新失败: userId={}", userId, e);
+            log.error("发送WebSocket未读数量更新消息到RabbitMQ失败: userId={}", userId, e);
         }
     }
 }

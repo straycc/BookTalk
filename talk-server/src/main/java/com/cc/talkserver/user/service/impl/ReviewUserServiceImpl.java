@@ -12,9 +12,12 @@ import com.cc.talkpojo.result.PageResult;
 import com.cc.talkpojo.dto.BookReviewDTO;
 import com.cc.talkpojo.dto.PageReviewDTO;
 import com.cc.talkpojo.entity.BookReview;
+import com.cc.talkpojo.entity.Comment;
 import com.cc.talkpojo.entity.UserInfo;
 import com.cc.talkpojo.vo.BookReviewVO;
+import com.cc.talkpojo.enums.TargetType;
 import com.cc.talkserver.user.mapper.BookUserMapper;
+import com.cc.talkserver.user.mapper.CommentUserMapper;
 import com.cc.talkserver.user.mapper.ReviewUserMapper;
 import com.cc.talkserver.user.mapper.UserInfoUserMapper;
 import com.cc.talkserver.user.mapper.UserMapper;
@@ -45,6 +48,9 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
 
     @Resource
     private BookUserMapper bookUserMapper;
+
+    @Resource
+    private CommentUserMapper commentUserMapper;
     @Resource
     private UserMapper userMapper;
 
@@ -204,8 +210,15 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
                     vo.setCreateTime(review.getCreateTime());
                     vo.setUpdateTime(review.getUpdateTime());
 
+                    // 查询评论数
+                    LambdaQueryWrapper<Comment> commentWrapper = new LambdaQueryWrapper<>();
+                    commentWrapper.eq(Comment::getTargetId, review.getId())
+                                  .eq(Comment::getTargetType, TargetType.BOOKREVIEW);
+                    Long commentCount = commentUserMapper.selectCount(commentWrapper);
+                    vo.setCommentCount(commentCount.intValue());
+
                     // 查用户信息
-                    vo.setNickName(UserContext.getUser().getUsername());
+                    vo.setNickName(UserContext.getUser().getNickName());
 //                    User user = userMapper.selectById(review.getUserId());
 //                    if (user != null) {
 //                        vo.setUsername(user.getUsername());
@@ -237,6 +250,14 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
         BookReviewVO bookReviewVO = new BookReviewVO();
         bookReviewVO.setBookReviewId(bookReviewId);
         BeanUtil.copyProperties(bookReview, bookReviewVO);
+
+        // 查询评论数
+        LambdaQueryWrapper<Comment> commentWrapper = new LambdaQueryWrapper<>();
+        commentWrapper.eq(Comment::getTargetId, bookReviewId)
+                      .eq(Comment::getTargetType, TargetType.BOOKREVIEW);
+        Long commentCount = commentUserMapper.selectCount(commentWrapper);
+        bookReviewVO.setCommentCount(commentCount.intValue());
+
         // 查询书评用户信息
         UserInfo userInfo = userInfoUserMapper.selectOne(
                 new LambdaQueryWrapper<UserInfo>().eq(UserInfo::getUserId,bookReview.getUserId())

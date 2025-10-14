@@ -109,8 +109,8 @@ public class BookController {
      * @return
      */
     @ApiOperation("热门书籍查询")
-    @GetMapping("/hootBook")
-    public Result<PageResult<BookShowDTO>> hootBook(@RequestBody BookPageDTO bookPageDTO) {
+    @PostMapping("/hotBook")
+    public Result<PageResult<BookShowDTO>> hotBook(@RequestBody BookPageDTO bookPageDTO) {
 
         PageResult <BookShowDTO> hotBookPage = bookUserService.getHotBook(bookPageDTO);
         return Result.success(hotBookPage);

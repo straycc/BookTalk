@@ -422,10 +422,9 @@ public class BookListServiceImpl extends ServiceImpl<BookListMapper, BookList> i
      * 书单删除书籍
      * @param bookListId
      * @param bookListDTO
-     * @param bookListDTO1
      */
     @Override
-    public void deleteBook(Long bookListId, BookListDTO bookListDTO, BookListDTO bookListDTO1) {
+    public void deleteBook(Long bookListId, BookListDTO bookListDTO) {
         if(bookListId == null || bookListDTO == null ){
             throw new BaseException(BusinessConstant.PARAM_ERROR);
         }

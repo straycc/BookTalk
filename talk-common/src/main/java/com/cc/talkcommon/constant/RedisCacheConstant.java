@@ -29,6 +29,11 @@ public class RedisCacheConstant {
     public static final String LIKE_TARGET_PREFIX = "like:target:"; // 目标维度， 快速统计点赞数
     public static final String LIKE_COUNT_PREFIX = "like:count:"; // 点赞计数缓存
 
+    //榜单推荐相关
+    public static final String RANKING_HOT_REVIEWS = "ranking:hot_reviews"; // 热门书评榜单
+    public static final String RANKING_BOOKS = "ranking:books"; // 书籍榜单
+    public static final String RECOMMENDATIONS_PREFIX = "recommend:user:"; // 用户推荐
+
 
 
 

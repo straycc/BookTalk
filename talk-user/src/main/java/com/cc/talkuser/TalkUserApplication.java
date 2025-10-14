@@ -14,7 +14,8 @@ import org.springframework.context.annotation.ComponentScan;
         "com.cc.talkcommon",
         "com.cc.talkuser",
         "com.cc.talkserver.user",
-        "com.cc.talkserver.config"
+        "com.cc.talkserver.config",
+        "com.cc.talkserver.schedule"
 })
 
 public class TalkUserApplication {
