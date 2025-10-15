@@ -94,4 +94,5 @@ public class Notification {
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
+
 }

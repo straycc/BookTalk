@@ -168,13 +168,13 @@
                 <artifactId>redisson</artifactId>
                 <version>3.23.3</version>
             </dependency>
-
             <!--RabbitMQ消息队列-->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-amqp</artifactId>
                 <version>${spring-boot.version}</version>
             </dependency>
+
 
         </dependencies>
 

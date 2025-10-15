@@ -3,6 +3,7 @@ package com.cc.talkcommon.websocket;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * WebSocket消息实体
@@ -13,6 +14,7 @@ import lombok.Data;
 @Data
 @Builder
 @AllArgsConstructor
+@NoArgsConstructor
 public class WebSocketMessage<T> {
 
     /**

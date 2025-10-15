@@ -1,5 +1,6 @@
 package com.cc.talkserver.listener;
 
+import com.cc.talkcommon.Json.JacksonObjectMapper;
 import com.cc.talkcommon.websocket.WebSocketMessage;
 import com.cc.talkserver.websocket.NotificationWebSocketHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,19 +22,17 @@ import org.springframework.stereotype.Component;
 public class WebSocketNotificationListener {
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JacksonObjectMapper objectMapper;
 
     /**
      * 消费WebSocket通知消息
-     * @param messageJson JSON格式的消息
+     * @param message WebSocket消息对象
      */
-    @RabbitListener(queues = "websocket.notification.queue")
-    public void handleWebSocketNotification(@Payload String messageJson) {
+    @RabbitListener(queues = "websocket.notification.queue", containerFactory = "rabbitListenerContainerFactory")
+    public void handleWebSocketNotification(WebSocketMessage<?> message) {
         try {
-            log.debug("接收到WebSocket通知消息: {}", messageJson);
-
-            // 解析消息
-            WebSocketMessage<?> message = objectMapper.readValue(messageJson, WebSocketMessage.class);
+            log.debug("接收到WebSocket通知消息: type={}, userId={}, data={}",
+                    message.getType(), message.getUserId(), message.getData());
 
             switch (message.getType()) {
                 case WebSocketMessage.MessageType.NEW_NOTIFICATION:
@@ -47,7 +46,7 @@ public class WebSocketNotificationListener {
             }
 
         } catch (Exception e) {
-            log.error("处理WebSocket通知消息失败: {}", messageJson, e);
+            log.error("处理WebSocket通知消息失败: message={}", message, e);
         }
     }
 

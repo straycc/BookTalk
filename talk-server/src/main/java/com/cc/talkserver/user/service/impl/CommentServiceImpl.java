@@ -27,6 +27,7 @@ import com.cc.talkserver.user.mapper.UserInfoUserMapper;
 import com.cc.talkserver.user.service.CommentService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.pagehelper.PageHelper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -50,6 +51,7 @@ import java.util.stream.Collectors;
  * @since 2025-09-08
  */
 @Service
+@Slf4j
 public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> implements CommentService {
 
     @Resource
@@ -316,9 +318,12 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
      * @param targetType 目标类型
      */
     private void publishCommentNotification(Comment comment, TargetType targetType) {
+        log.info("开始发布评论通知: commentId={}, targetType={}", comment.getId(), targetType);
+
         try {
             UserDTO currentUser = UserContext.getUser();
             if (currentUser == null) {
+                log.warn("当前用户为空，无法发送通知");
                 return;
             }
 
@@ -326,18 +331,20 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
             switch (targetType) {
                 case BOOKREVIEW:
                     // 评论书评，通知书评作者
+                    log.info("处理书评评论通知");
                     publishBookReviewCommentNotification(comment, currentUser);
                     break;
                 case COMMENT:
                     // 回复评论，通知被回复的评论作者
+                    log.info("处理回复评论通知");
                     publishReplyCommentNotification(comment, currentUser);
                     break;
                 default:
-                    // 其他类型暂不发送通知
+                    log.warn("不支持的目标类型: {}，跳过通知发送", targetType);
                     break;
             }
         } catch (Exception e) {
-            // 通知发送失败不影响主流程
+            log.error("发布评论通知失败: commentId={}, targetType={}", comment.getId(), targetType, e);
         }
     }
 
@@ -375,34 +382,52 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
      * @param currentUser 当前用户
      */
     private void publishReplyCommentNotification(Comment comment, UserDTO currentUser) {
+        log.info("开始处理回复评论通知: commentId={}, parentId={}, currentUser={}",
+                comment.getId(), comment.getParentId(), currentUser.getId());
+
         if (comment.getParentId() == null) {
+            log.warn("回复评论没有父评论ID，跳过通知发送: commentId={}", comment.getId());
             return;
         }
 
         // 查询父评论
         Comment parentComment = commentUserMapper.selectById(comment.getParentId());
-        if (parentComment == null || parentComment.getUserId().equals(currentUser.getId())) {
-            // 父评论不存在或者是回复自己的评论，不发送通知
+        if (parentComment == null) {
+            log.warn("找不到父评论，跳过通知发送: parentId={}", comment.getParentId());
             return;
         }
 
-        // 创建回复通知请求
-        NotificationRequest request = NotificationRequest.builder()
-                .userId(parentComment.getUserId())    // 接收通知的用户ID（被回复的用户）
-                .type(NotificationRequest.NotificationType.REPLY) // 通知类型为回复
-                .targetId(comment.getId())            // 目标ID（当前评论ID）
-                .targetType(NotificationRequest.TargetType.COMMENT) // 目标类型为评论
-                .sender(new NotificationRequest.SenderInfo(
-                        currentUser.getId(),          // 回复者ID
-                        currentUser.getNickName(),    // 回复者昵称
-                        currentUser.getAvatar()       // 回复者头像
-                ))
-                .title("收到新回复")
-                .content(comment.getContent())       // 回复内容
-                .build();
+        if (parentComment.getUserId().equals(currentUser.getId())) {
+            log.info("回复自己的评论，跳过通知发送: parentId={}, parentUserId={}, currentUserId={}",
+                    comment.getParentId(), parentComment.getUserId(), currentUser.getId());
+            return;
+        }
 
-        // 发布回复通知
-        notificationEventPublisher.publishReplyEvent(request);
+        log.info("父评论信息: parentId={}, parentUserId={}, 准备发送回复通知",
+                parentComment.getId(), parentComment.getUserId());
+
+        try {
+            // 创建回复通知请求
+            NotificationRequest request = NotificationRequest.builder()
+                    .userId(parentComment.getUserId())    // 接收通知的用户ID（被回复的用户）
+                    .type(NotificationRequest.NotificationType.REPLY) // 通知类型为回复
+                    .targetId(comment.getId())            // 目标ID（当前评论ID）
+                    .targetType(NotificationRequest.TargetType.COMMENT) // 目标类型为评论
+                    .sender(new NotificationRequest.SenderInfo(
+                            currentUser.getId(),          // 回复者ID
+                            currentUser.getNickName(),    // 回复者昵称
+                            currentUser.getAvatar()       // 回复者头像
+                    ))
+                    .title("收到新回复")
+                    .content(comment.getContent())       // 回复内容
+                    .build();
+
+            // 发布回复通知
+            notificationEventPublisher.publishReplyEvent(request);
+            log.info("回复通知发布成功: commentId={}, 被回复用户={}", comment.getId(), parentComment.getUserId());
+        } catch (Exception e) {
+            log.error("发布回复通知失败: commentId={}", comment.getId(), e);
+        }
     }
 
 

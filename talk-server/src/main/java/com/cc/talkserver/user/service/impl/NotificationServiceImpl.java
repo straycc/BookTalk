@@ -17,6 +17,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
@@ -42,6 +43,7 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
     private NotificationMapper notificationMapper;
 
     @Override
+    @Transactional
     public void createNotification(NotificationEvent event) {
         log.info("创建通知记录: 类型={}, 接收者={}, 发送者={}",
                 event.getType(), event.getUserId(), event.getSenderId());
@@ -51,6 +53,7 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
         BeanUtils.copyProperties(event, notification);
         notification.setIsRead(false);
         notification.setIsDeleted(false);
+        notification.setCreateTime(LocalDateTime.now()); // 添加创建时间
 
         // 保存到数据库
         this.save(notification);
@@ -109,6 +112,7 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
         Notification notification = new Notification();
         notification.setId(notificationId);
         notification.setIsRead(true);
+        // 移除手动设置 updateTime，依赖数据库自动更新
 
         LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Notification::getId, notificationId)
@@ -123,6 +127,11 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
 
     @Override
     public void batchMarkAsRead(List<Long> notificationIds) {
+        if (notificationIds == null || notificationIds.isEmpty()) {
+            log.warn("批量标记已读：通知ID列表为空");
+            return;
+        }
+
         Long userId = getCurrentUserId();
         int updateCount = notificationMapper.batchMarkAsRead(userId, notificationIds);
 
@@ -139,6 +148,7 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
         Notification notification = new Notification();
         notification.setId(notificationId);
         notification.setIsDeleted(true);
+        // 移除手动设置 updateTime，依赖数据库自动更新
 
         LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Notification::getId, notificationId)
@@ -151,6 +161,11 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
 
     @Override
     public void batchDeleteNotifications(List<Long> notificationIds) {
+        if (notificationIds == null || notificationIds.isEmpty()) {
+            log.warn("批量删除通知：通知ID列表为空");
+            return;
+        }
+
         Long userId = getCurrentUserId();
         int deleteCount = notificationMapper.batchDelete(userId, notificationIds);
         log.info("批量删除通知完成: 数量={}", deleteCount);

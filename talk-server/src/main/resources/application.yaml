@@ -19,12 +19,26 @@ spring:
     password: ${REDIS_PASSWORD}   # 如果没有密码，这行可以删除或者留空
     database: 6
 
+
   rabbitmq:
     host: 192.168.72.128
     port: 5672
     username: bookTalk
     password: bookTalk
-    virtualHost: /bookTalk
+    virtual-host: /bookTalk
+
+    # 添加这些配置
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+    listener:
+      simple:
+        acknowledge-mode: manual
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
 
 redisson:
   config: classpath:redisson.yml
@@ -40,7 +54,20 @@ redisson:
     pathmatch:
       matching-strategy: ant_path_matcher
 
+# MyBatis 配置
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.cc.talkpojo.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
+# MyBatis-Plus 配置
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.cc.talkpojo.entity
+  configuration:
+    map-underscore-to-camel-case: true
 
 aliyun:
   oss:
@@ -54,8 +81,12 @@ logging:
   level:
     root: info
     com.cc.talkadmin: debug
+    com.cc.talkserver: debug
+    com.cc.talkuser: debug
+    org.springframework.amqp: DEBUG
+    com.rabbitmq: DEBUG
 
 
 
 server:
-  port: 8082
+  port: 8081

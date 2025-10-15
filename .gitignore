@@ -5,6 +5,7 @@
 *.war
 *.ear
 
+
 # Maven
 target/
 pom.xml.tag
@@ -47,3 +48,6 @@ logs/
 
 # Local environment files
 .env
+
+.claude/
+**/resources/json/*.json

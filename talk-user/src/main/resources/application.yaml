@@ -20,9 +20,29 @@ spring:
     host: 192.168.72.128
     database: 6
     password: ${REDIS_PASSWORD}
+
+  rabbitmq:
+    host: 192.168.72.128
+    port: 5672
+    username: bookTalk
+    password: bookTalk
+    virtual-host: /bookTalk
+
+    # 添加这些配置
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+    listener:
+      simple:
+        acknowledge-mode: manual
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
+
   aop:
     auto: true
-
 
   mvc:
     pathmatch:
@@ -43,7 +63,7 @@ logging:
     root: info
     com.cc.talkserver: debug
     com.cc.talkadmin: debug
-
+    com.cc.talkuser: debug
 
 
 server:
