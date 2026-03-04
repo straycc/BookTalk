@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cc.booktalk.infrastructure.persistence.user.mapper.tag.BookTagUserMapper">
+
+    <!-- 根据书籍ID查询标签ID列表 -->
+    <select id="selectTagIdsByBookId" resultType="java.lang.Long">
+        SELECT tag_id
+        FROM book_tag_relation
+        WHERE book_id = #{bookId}
+        ORDER BY tag_id
+    </select>
+
+    <!-- 根据标签ID列表查找相似书籍 -->
+    <select id="selectSimilarBooksByTags" resultType="java.lang.Long">
+        SELECT btr.book_id, COUNT(*) as tag_match_count
+        FROM book_tag_relation btr
+        WHERE btr.tag_id IN
+        <foreach collection="tagIds" item="tagId" open="(" close=")" separator=",">
+            #{tagId}
+        </foreach>
+        AND btr.book_id != #{excludeBookId}
+        GROUP BY btr.book_id
+        ORDER BY tag_match_count DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 根据分类ID查找热门书籍 -->
+    <select id="selectHotBooksByCategory" resultType="java.lang.Long">
+        SELECT b.id
+        FROM book b
+        WHERE b.category_id = #{categoryId}
+        AND b.id != #{excludeBookId}
+        ORDER BY b.hot_score DESC, b.average_score DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

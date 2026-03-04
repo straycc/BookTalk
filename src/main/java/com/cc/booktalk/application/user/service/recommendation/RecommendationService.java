@@ -1,0 +1,61 @@
+package com.cc.booktalk.application.user.service.recommendation;
+
+import com.cc.booktalk.entity.vo.PersonalizedRecVO;
+import java.util.List;
+
+/**
+ * 个性化推荐服务接口
+ *
+ * @author cc
+ * @since 2025-10-17
+ */
+
+public interface RecommendationService {
+
+    /**
+     * 获取个性化推荐书籍
+     * 基于用户兴趣标签和行为历史推荐
+     *
+     * @param userId 用户ID
+     * @param limit 推荐数量限制
+     * @return 推荐书籍列表
+     */
+    List<PersonalizedRecVO> getPersonalizedRecommendations(Long userId, Integer limit);
+
+    /**
+     * 获取基于内容的推荐
+     * 基于用户兴趣标签推荐相似内容
+     *
+     * @param userId 用户ID
+     * @param limit 推荐数量限制
+     * @return 推荐书籍列表
+     */
+    List<PersonalizedRecVO> getContentBasedRecommendations(Long userId, Integer limit);
+
+    /**
+     * 获取协同过滤推荐
+     * 基于相似用户的行为推荐
+     *
+     * @param userId 用户ID
+     * @param limit 推荐数量限制
+     * @return 推荐书籍列表
+     */
+    List<PersonalizedRecVO> getCollaborativeRecommendations(Long userId, Integer limit);
+
+    /**
+     * 获取热门推荐
+     * 基于整体热度推荐
+     *
+     * @param limit 推荐数量限制
+     * @return 推荐书籍列表
+     */
+    List<PersonalizedRecVO> getHotRecommendations(Integer limit);
+
+    /**
+     * 清除用户推荐缓存
+     *
+     * @param userId 用户ID
+     */
+    void clearRecommendationCache(Long userId);
+
+}

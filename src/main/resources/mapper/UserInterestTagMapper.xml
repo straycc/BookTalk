@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserInterestTagMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.cc.booktalk.entity.entity.recommendation.UserInterestTag">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="user_id" property="userId" jdbcType="BIGINT"/>
+        <result column="tag_name" property="tagName" jdbcType="VARCHAR"/>
+        <result column="interest_score" property="interestScore" jdbcType="DECIMAL"/>
+        <result column="behavior_count" property="behaviorCount" jdbcType="INTEGER"/>
+        <result column="last_update_time" property="updateTime" jdbcType="TIMESTAMP"/>
+        <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 获取用户的所有兴趣标签 -->
+    <select id="getUserInterests" resultMap="BaseResultMap">
+        SELECT
+            id, user_id, tag_name, interest_score,
+            behavior_count, update_time, create_time
+        FROM user_interest_tag
+        WHERE user_id = #{userId}
+        ORDER BY interest_score DESC
+    </select>
+
+    <!-- 根据用户ID查询兴趣标签（简化方法） -->
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT
+            id, user_id, tag_name, interest_score,
+            behavior_count, update_time, create_time
+        FROM user_interest_tag
+        WHERE user_id = #{userId}
+        ORDER BY interest_score DESC
+    </select>
+
+    <!-- 根据用户ID和标签名查询兴趣标签 -->
+    <select id="selectByUserAndTag" resultMap="BaseResultMap">
+        SELECT
+            id, user_id, tag_name, interest_score,
+            behavior_count, update_time, create_time
+        FROM user_interest_tag
+        WHERE user_id = #{userId}
+          AND tag_name = #{tagName}
+        LIMIT 1
+    </select>
+
+    <!-- 获取用户兴趣分数最高的标签 -->
+    <select id="getTopUserInterests" resultMap="BaseResultMap">
+        SELECT
+            id, user_id, tag_name, interest_score,
+            behavior_count, update_time, create_time
+        FROM user_interest_tag
+        WHERE user_id = #{userId}
+          AND interest_score > 0.1
+        ORDER BY interest_score DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 更新用户兴趣标签（存在则更新，不存在则插入） -->
+    <insert id="upsertUserInterest" parameterType="com.cc.booktalk.entity.entity.recommendation.UserInterestTag">
+        INSERT INTO user_interest_tag (
+            user_id, tag_name, interest_score,
+            behavior_count, update_time, create_time
+        ) VALUES (
+            #{userInterest.userId}, #{userInterest.tagName},
+            #{userInterest.interestScore}, #{userInterest.behaviorCount},
+            #{userInterest.lastUpdateTime}, #{userInterest.createTime}
+        )
+        ON DUPLICATE KEY UPDATE
+            interest_score = VALUES(interest_score),
+            behavior_count = VALUES(behavior_count),
+            update_time = VALUES(update_time)
+    </insert>
+
+    <!-- 批量更新用户兴趣标签 -->
+    <insert id="batchUpsertInterests" parameterType="java.util.List">
+        INSERT INTO user_interest_tag (
+            user_id, tag_name, interest_score,
+            behavior_count, last_update_time, create_time
+        ) VALUES
+        <foreach collection="userInterests" item="interest" separator=",">
+            (#{interest.userId}, #{interest.tagName},
+             #{interest.interestScore}, #{interest.behaviorCount},
+             #{interest.lastUpdateTime}, #{interest.createTime})
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+            interest_score = VALUES(interest_score),
+            behavior_count = VALUES(behavior_count),
+            last_update_time = VALUES(last_update_time)
+    </insert>
+
+    <!-- 应用时间衰减到用户兴趣分数 -->
+    <update id="applyTimeDecay">
+        UPDATE user_interest_tag
+        SET interest_score = interest_score * #{decayFactor},
+            update_time = NOW()
+        WHERE user_id = #{userId}
+          AND interest_score > 0.01
+    </update>
+
+    <!-- 删除低分数的兴趣标签 -->
+    <delete id="deleteLowScoreInterests" parameterType="map">
+        DELETE FROM user_interest_tag
+        WHERE user_id = #{userId}
+          AND interest_score &lt; #{minScore}
+    </delete>
+
+    <!-- 获取用户兴趣统计信息 -->
+    <select id="getUserInterestStats" resultType="map">
+        SELECT
+            COUNT(*) as total_interests,
+            SUM(interest_score) as total_score,
+            AVG(interest_score) as avg_score,
+            MAX(interest_score) as max_score,
+            MIN(interest_score) as min_score,
+            SUM(behavior_count) as total_behaviors
+        FROM user_interest_tag
+        WHERE user_id = #{userId}
+    </select>
+
+    <!-- 获取兴趣标签相似的用户 -->
+    <select id="getSimilarUsersByInterests" resultType="java.lang.Long">
+        SELECT uit2.user_id
+        FROM user_interest_tag uit1
+        INNER JOIN user_interest_tag uit2
+            ON uit1.tag_name = uit2.tag_name
+            AND uit1.user_id != uit2.user_id
+        WHERE uit1.user_id = #{userId}
+          AND uit1.interest_score > 1.0
+          AND uit2.interest_score > 1.0
+        GROUP BY uit2.user_id
+        HAVING COUNT(*) >= 3
+        ORDER BY COUNT(*) DESC, SUM(uit2.interest_score) DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 清理用户的过期兴趣标签 -->
+    <delete id="cleanExpiredInterests">
+        DELETE FROM user_interest_tag
+        WHERE user_id = #{userId}
+          AND update_time &lt; DATE_SUB(NOW(), INTERVAL #{days} DAY)
+          AND interest_score &lt; 0.5
+    </delete>
+
+    <!-- 根据标签名获取推荐书籍 -->
+    <select id="getBooksByTagName" resultType="com.cc.booktalk.entity.vo.PersonalizedRecVO">
+        SELECT
+            b.id as bookId,
+            b.title as bookTitle,
+            b.author as author,
+            b.cover_url as coverImage,
+            (
+                -- 简化评分：对数转换平衡量级
+                LOG10(COALESCE(b.favorite_count, 0) + 1) * 10 +
+                COALESCE(b.average_score, 0) * 8 +
+                LOG10(COALESCE(b.score_count, 0) + 1) * 10
+            ) as score,
+            CONCAT('基于', #{tagName}, '标签推荐') as reason
+        FROM book b
+        INNER JOIN book_tag_relation btr ON b.id = btr.book_id
+        INNER JOIN tag t ON btr.tag_id = t.id
+        WHERE t.name = #{tagName}
+        ORDER BY score DESC, b.create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 获取所有有兴趣标签的用户ID -->
+    <select id="getAllUsersWithInterests" resultType="java.lang.Long">
+        SELECT DISTINCT user_id
+        FROM user_interest_tag
+        WHERE interest_score > 0.1
+        ORDER BY user_id
+    </select>
+
+    <!-- 根据标签名获取用户ID列表 -->
+    <select id="getUsersByTag" resultType="java.lang.Long">
+        SELECT DISTINCT user_id
+        FROM user_interest_tag
+        WHERE tag_name = #{tagName}
+          AND interest_score > 0.1
+        ORDER BY interest_score DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

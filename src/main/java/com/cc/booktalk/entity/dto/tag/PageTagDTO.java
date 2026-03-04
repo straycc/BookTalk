@@ -1,0 +1,39 @@
+package com.cc.booktalk.entity.dto.tag;
+import com.cc.booktalk.entity.dto.base.PageDTO;
+import lombok.Data;
+import java.time.LocalDate;
+
+@Data
+public class PageTagDTO implements PageDTO {
+
+    /**
+     * 页面号
+     */
+    private Integer pageNum;
+
+    /**
+     * 页面大小
+     */
+    private Integer pageSize;
+
+    /**
+     * 分类 ID
+     */
+    private Long categoryId;
+
+    /**
+     * 标签名称
+     */
+    private String name;
+
+    /**
+     * 起始时间
+     */
+    private LocalDate createdFrom;
+
+    /**
+     * 结束时间
+     */
+    private LocalDate createdTo;
+
+}

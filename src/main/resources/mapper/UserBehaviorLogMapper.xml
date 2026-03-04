@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserBehaviorLogMapper">
+
+
+    <!-- 获取用户高分书籍（基于行为日志） -->
+    <select id="getHighScoreBooks" resultType="com.cc.booktalk.entity.vo.PersonalizedRecVO">
+        SELECT
+            b.id as bookId,
+            b.title as bookTitle,
+            b.author as author,
+            b.cover_url as coverImage,
+            -- 基于行为类型计算分数
+            SUM(
+                CASE
+                    WHEN ubl.behavior_type = 'BOOK_COLLECT' THEN 5.0
+                    WHEN ubl.behavior_type = 'BOOK_LIKE' THEN 3.0
+                    WHEN ubl.behavior_type = 'BOOK_REVIEW' THEN 4.0
+                    WHEN ubl.behavior_type = 'BOOK_VIEW' THEN 0.5
+                    ELSE 1.0
+                END
+            ) as score,
+            '基于用户行为推荐' as reason
+        FROM user_behavior_log ubl
+        INNER JOIN book b ON ubl.target_id = b.id
+        WHERE ubl.user_id = #{userId}
+          AND ubl.target_type = 'BOOK'
+          AND ubl.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY) -- 最近30天的行为
+        GROUP BY b.id, b.title, b.author, b.cover_url
+        HAVING score > 1.0 -- 只推荐有较高分数的书籍
+        ORDER BY score DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 获取热门书籍 -->
+    <select id="getHotBooks" resultType="com.cc.booktalk.entity.vo.PersonalizedRecVO">
+        SELECT
+            b.id as bookId,
+            b.title as bookTitle,
+            b.author as author,
+            b.cover_url as coverImage,
+            -- 基于用户行为计算热度分数
+            COUNT(*) * 0.1 + -- 行为次数权重（降低到10%）
+            SUM(
+                CASE
+                    WHEN ubl.behavior_type = 'BOOK_COLLECT' THEN 5
+                    WHEN ubl.behavior_type = 'BOOK_LIKE' THEN 3
+                    WHEN ubl.behavior_type = 'BOOK_REVIEW' THEN 4
+                    WHEN ubl.behavior_type = 'BOOK_VIEW' THEN 0.5 -- 浏览行为权重降低
+                    ELSE 1
+                END
+            ) * 0.9 as score,
+            '热门推荐' as reason
+        FROM user_behavior_log ubl
+        INNER JOIN book b ON ubl.target_id = b.id
+        WHERE ubl.target_type = 'BOOK'
+          AND ubl.create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY) -- 最近7天的行为
+        GROUP BY b.id, b.title, b.author, b.cover_url
+        HAVING COUNT(*) >= 5 -- 至少5次行为
+        ORDER BY score DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 获取活跃用户列表 -->
+    <select id="getActiveUsers" resultType="java.lang.Long">
+        SELECT DISTINCT user_id
+        FROM user_behavior_log
+        WHERE create_time >= DATE_SUB(NOW(), INTERVAL #{days} DAY)
+        GROUP BY user_id
+        HAVING COUNT(*) >= #{minActions}
+        ORDER BY MAX(create_time) DESC, COUNT(*) DESC
+        LIMIT 10000
+    </select>
+
+</mapper>

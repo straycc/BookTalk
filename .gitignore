@@ -6,6 +6,7 @@
 *.ear
 
 
+
 # Maven
 target/
 pom.xml.tag
@@ -50,4 +51,4 @@ logs/
 .env
 
 .claude/
-**/resources/json/*.json
+**/resources/*/*.json
