@@ -1,6 +1,7 @@
 package com.cc.booktalk.application.user.service.recommendation;
 
 import com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO;
+import com.cc.booktalk.interfaces.vo.user.review.HotReviewVO;
 import java.util.List;
 
 /**
@@ -58,6 +59,24 @@ public interface RecommendationService {
      * @return 刷新后的热门推荐列表
      */
     List<PersonalizedRecVO> refreshHotRecommendationsCache(Integer limit);
+
+    /**
+     * 获取热门书评推荐（用于首页推荐区）
+     *
+     * @param period 时间周期: daily/weekly/monthly 或 24h/7d/30d
+     * @param limit 推荐数量
+     * @return 热门书评列表
+     */
+    List<HotReviewVO> getHotReviewRecommendations(String period, Integer limit);
+
+    /**
+     * 刷新热门书评推荐缓存（定时任务调用）
+     *
+     * @param period 时间周期: daily/weekly/monthly 或 24h/7d/30d
+     * @param limit 缓存数量
+     * @return 刷新后的热门书评列表
+     */
+    List<HotReviewVO> refreshHotReviewRecommendationsCache(String period, Integer limit);
 
     /**
      * 清除用户推荐缓存

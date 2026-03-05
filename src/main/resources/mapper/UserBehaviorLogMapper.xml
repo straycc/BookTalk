@@ -111,4 +111,41 @@
         ORDER BY create_time DESC
     </select>
 
+    <!-- 获取热门书评候选ID（先按行为活跃度做初筛） -->
+    <select id="getHotReviewCandidateIds" resultType="java.lang.Long">
+        SELECT target_id
+        FROM user_behavior_log
+        WHERE (
+                UPPER(target_type) IN ('REVIEW', 'BOOK_REVIEW')
+                OR behavior_type LIKE 'REVIEW_%'
+              )
+          AND target_id IS NOT NULL
+          AND create_time >= DATE_SUB(NOW(), INTERVAL #{days} DAY)
+        GROUP BY target_id
+        HAVING COUNT(*) >= 2
+        ORDER BY COUNT(*) DESC, MAX(create_time) DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 获取单条书评的近期行为记录 -->
+    <select id="getReviewRecentBehaviors" resultType="com.cc.booktalk.domain.entity.recommendation.UserBehaviorLog">
+        SELECT
+            id,
+            user_id,
+            target_id,
+            target_type,
+            behavior_type,
+            behavior_score,
+            extra_data,
+            create_time
+        FROM user_behavior_log
+        WHERE (
+                UPPER(target_type) IN ('REVIEW', 'BOOK_REVIEW')
+                OR behavior_type LIKE 'REVIEW_%'
+              )
+          AND target_id = #{reviewId}
+          AND create_time >= DATE_SUB(NOW(), INTERVAL #{days} DAY)
+        ORDER BY create_time DESC
+    </select>
+
 </mapper>

@@ -62,7 +62,10 @@ public class RecommendationCacheRefreshService {
     public void updateHotRecommendations() {
         log.debug("开始更新热门推荐缓存");
         List<PersonalizedRecVO> hotRecommendations = recommendationService.refreshHotRecommendationsCache(50);
-        log.debug("热门推荐更新完成: 推荐数量={}", hotRecommendations.size());
+        List<?> dailyHotReviews = recommendationService.refreshHotReviewRecommendationsCache("daily", 20);
+        List<?> weeklyHotReviews = recommendationService.refreshHotReviewRecommendationsCache("weekly", 20);
+        log.debug("热门推荐更新完成: 书籍={}, 日书评={}, 周书评={}",
+                hotRecommendations.size(), dailyHotReviews.size(), weeklyHotReviews.size());
     }
 
     /**

@@ -32,6 +32,7 @@ public class RedisCacheConstant {
     public static final String RANKING_BOOKS = "ranking:books"; // 书籍榜单
     public static final String RECOMMENDATIONS_PREFIX = "recommend:user:"; // 用户推荐
     public static final String RECOMMENDATIONS_HOT = "recommendation:hot_books"; // 热门推荐
+    public static final String RECOMMENDATIONS_HOT_REVIEWS_PREFIX = "recommendation:hot_reviews:"; // 热门书评推荐
     public static final String USER_TOP_INTEREST_PREFIX = "user:top_interests:"; // 用户兴趣标签
 
     public static final String RANKING_HOT_REVIEWS_PREFIX = "ranking:hot_reviews:" ; // 热门书评推荐

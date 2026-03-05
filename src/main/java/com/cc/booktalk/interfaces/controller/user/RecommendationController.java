@@ -3,6 +3,7 @@ package com.cc.booktalk.interfaces.controller.user;
 import com.cc.booktalk.common.context.UserContext;
 import com.cc.booktalk.common.result.Result;
 import com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO;
+import com.cc.booktalk.interfaces.vo.user.review.HotReviewVO;
 import com.cc.booktalk.application.user.service.recommendation.RecommendationService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -87,6 +88,22 @@ public class RecommendationController {
             List<PersonalizedRecVO> recommendations = recommendationService.getHotRecommendations(limit);
             log.info("热门推荐完成: 推荐数量={}", recommendations.size());
             return Result.success(recommendations);
+    }
+
+    /**
+     * 获取热门书评推荐（首页推荐区）
+     */
+    @GetMapping("/hot-reviews")
+    @ApiOperation("获取热门书评推荐")
+    public Result<List<HotReviewVO>> getHotReviewRecommendations(
+            @ApiParam(value = "时间周期: daily/weekly/monthly 或 24h/7d/30d", example = "7d")
+            @RequestParam(defaultValue = "7d") String period,
+            @ApiParam(value = "推荐数量限制", example = "6")
+            @RequestParam(defaultValue = "6") Integer limit) {
+        log.info("获取热门书评推荐: period={}, limit={}", period, limit);
+        List<HotReviewVO> recommendations = recommendationService.getHotReviewRecommendations(period, limit);
+        log.info("热门书评推荐完成: 数量={}", recommendations.size());
+        return Result.success(recommendations);
     }
 
     /**

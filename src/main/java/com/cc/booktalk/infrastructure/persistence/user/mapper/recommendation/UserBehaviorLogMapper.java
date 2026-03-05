@@ -61,4 +61,22 @@ public interface UserBehaviorLogMapper extends BaseMapper<UserBehaviorLog> {
      */
     List<UserBehaviorLog> getBookRecentBehaviors(@Param("bookId") Long bookId, @Param("days") Integer days);
 
+    /**
+     * 获取热门书评候选ID（按行为活跃度初筛）
+     *
+     * @param days 最近天数
+     * @param limit 候选数量
+     * @return 书评ID列表
+     */
+    List<Long> getHotReviewCandidateIds(@Param("days") Integer days, @Param("limit") Integer limit);
+
+    /**
+     * 获取单条书评的近期行为记录
+     *
+     * @param reviewId 书评ID
+     * @param days 最近天数
+     * @return 行为记录
+     */
+    List<UserBehaviorLog> getReviewRecentBehaviors(@Param("reviewId") Long reviewId, @Param("days") Integer days);
+
 }

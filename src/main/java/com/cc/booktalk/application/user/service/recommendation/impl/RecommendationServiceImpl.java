@@ -2,14 +2,23 @@ package com.cc.booktalk.application.user.service.recommendation.impl;
 
 import com.cc.booktalk.common.constant.BusinessConstant;
 import com.cc.booktalk.common.constant.RedisCacheConstant;
+import com.cc.booktalk.common.utils.TimeUtils;
+import com.cc.booktalk.domain.entity.book.Book;
+import com.cc.booktalk.domain.entity.review.BookReview;
 import com.cc.booktalk.domain.entity.recommendation.UserBehaviorLog;
 import com.cc.booktalk.domain.entity.recommendation.UserInterestTag;
+import com.cc.booktalk.domain.entity.user.UserInfo;
 import com.cc.booktalk.domain.recommendation.HotBookRecDomain;
+import com.cc.booktalk.domain.recommendation.HotReviewRecDomain;
 import com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO;
+import com.cc.booktalk.interfaces.vo.user.review.HotReviewVO;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.book.BookUserMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserBehaviorLogMapper;
+import com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserInfoUserMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserInterestTagMapper;
+import com.cc.booktalk.infrastructure.persistence.user.mapper.review.ReviewUserMapper;
 import com.cc.booktalk.application.user.service.recommendation.RecommendationService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -38,12 +47,21 @@ public class RecommendationServiceImpl implements RecommendationService {
     @Resource
     private BookUserMapper bookUserMapper;
 
+    @Resource
+    private ReviewUserMapper reviewUserMapper;
+
+    @Resource
+    private UserInfoUserMapper userInfoUserMapper;
+
     @Resource(name = "customObjectRedisTemplate")
     private RedisTemplate<String, Object> redisTemplate;
 
 
     @Resource
     private HotBookRecDomain  hotBookRecDomain;
+
+    @Resource
+    private HotReviewRecDomain hotReviewRecDomain;
 
 
     /**
@@ -55,6 +73,11 @@ public class RecommendationServiceImpl implements RecommendationService {
      * 默认推荐数量
      */
     private static final int DEFAULT_RECOMMENDATION_COUNT = 10;
+    /**
+     * 热门推荐缓存预热数量（固定写入，接口再按limit裁剪）
+     */
+    private static final int HOT_CACHE_PREWARM_COUNT = 50;
+    private static final int DEFAULT_HOT_REVIEW_LIMIT = 6;
 
 
 
@@ -247,8 +270,9 @@ public class RecommendationServiceImpl implements RecommendationService {
                 return cachedResults.stream().limit(finalLimit).collect(Collectors.toList());
             }
 
-            // 缓存未命中时兜底计算一次，并回填缓存
-            return refreshHotRecommendationsCache(finalLimit);
+            // 缓存未命中时固定预热较大集合，避免被某次小limit请求“缩容”
+            List<PersonalizedRecVO> refreshed = refreshHotRecommendationsCache(HOT_CACHE_PREWARM_COUNT);
+            return refreshed.stream().limit(finalLimit).collect(Collectors.toList());
 
         } catch (Exception e) {
             log.error("获取热门推荐失败", e);
@@ -264,7 +288,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     @Override
     public List<PersonalizedRecVO> refreshHotRecommendationsCache(Integer limit) {
         try {
-            int finalLimit = limit != null && limit > 0 ? limit : 50;
+            int finalLimit = limit != null && limit > 0 ? limit : HOT_CACHE_PREWARM_COUNT;
             List<PersonalizedRecVO> hotBooks = calculateHotRecommendations(finalLimit);
             cacheHotRecommendationsIfNotEmpty(hotBooks);
             log.info("热门推荐缓存刷新完成: 数量={}", hotBooks.size());
@@ -273,6 +297,45 @@ public class RecommendationServiceImpl implements RecommendationService {
             log.error("刷新热门推荐缓存失败", e);
             return new ArrayList<>();
         }
+    }
+
+    /**
+     * 获取热门书评
+     * @param period 时间周期: daily/weekly/monthly 或 24h/7d/30d
+     * @param limit 推荐数量
+     * @return
+     */
+    @Override
+    public List<HotReviewVO> getHotReviewRecommendations(String period, Integer limit) {
+        int finalLimit = (limit != null && limit > 0) ? limit : DEFAULT_HOT_REVIEW_LIMIT;
+        String normalizedPeriod = normalizeReviewPeriod(period);
+        String cacheKey = RedisCacheConstant.RECOMMENDATIONS_HOT_REVIEWS_PREFIX + normalizedPeriod;
+
+        List<HotReviewVO> cached = (List<HotReviewVO>) redisTemplate.opsForValue().get(cacheKey);
+        if (cached != null && !cached.isEmpty()) {
+            return cached.stream().limit(finalLimit).collect(Collectors.toList());
+        }
+
+        List<HotReviewVO> hotReviews = refreshHotReviewRecommendationsCache(normalizedPeriod, Math.max(finalLimit, 20));
+        return hotReviews.stream().limit(finalLimit).collect(Collectors.toList());
+    }
+
+    /**
+     * 刷新热门书评
+     * @param period 时间周期: daily/weekly/monthly 或 24h/7d/30d
+     * @param limit 缓存数量
+     * @return
+     */
+    @Override
+    public List<HotReviewVO> refreshHotReviewRecommendationsCache(String period, Integer limit) {
+        String normalizedPeriod = normalizeReviewPeriod(period);
+        int finalLimit = (limit != null && limit > 0) ? limit : 20;
+        String cacheKey = RedisCacheConstant.RECOMMENDATIONS_HOT_REVIEWS_PREFIX + normalizedPeriod;
+        List<HotReviewVO> hotReviews = calculateHotReviewRecommendations(normalizedPeriod, finalLimit);
+        if (!hotReviews.isEmpty()) {
+            redisTemplate.opsForValue().set(cacheKey, hotReviews, resolveReviewCacheTtl(normalizedPeriod));
+        }
+        return hotReviews;
     }
 
 
@@ -322,8 +385,23 @@ public class RecommendationServiceImpl implements RecommendationService {
                 .limit(finalLimit)
                 .collect(Collectors.toList());
 
-        if (hotBooks.isEmpty()) {
-            hotBooks = buildFallbackHotBooks(finalLimit, now());
+        // 行为热榜不足时，使用基础热门补齐到limit
+        if (hotBooks.size() < finalLimit) {
+            int need = finalLimit - hotBooks.size();
+            List<PersonalizedRecVO> fallback = buildFallbackHotBooks(finalLimit, now());
+            Set<Long> existed = hotBooks.stream()
+                    .map(PersonalizedRecVO::getBookId)
+                    .collect(Collectors.toSet());
+            for (PersonalizedRecVO item : fallback) {
+                if (item.getBookId() == null || existed.contains(item.getBookId())) {
+                    continue;
+                }
+                hotBooks.add(item);
+                existed.add(item.getBookId());
+                if (--need <= 0) {
+                    break;
+                }
+            }
         }
         return hotBooks;
     }
@@ -351,7 +429,142 @@ public class RecommendationServiceImpl implements RecommendationService {
         if (hotBooks == null || hotBooks.isEmpty()) {
             return;
         }
-        redisTemplate.opsForValue().set(RedisCacheConstant.RECOMMENDATIONS_HOT, hotBooks, Duration.ofHours(1));
+        // 与定时任务周期（6小时）保持一致，减少缓存空窗期
+        redisTemplate.opsForValue().set(RedisCacheConstant.RECOMMENDATIONS_HOT, hotBooks, Duration.ofHours(6));
+    }
+
+    private List<HotReviewVO> calculateHotReviewRecommendations(String period, int limit) {
+        int days = resolveReviewDays(period);
+        int candidateLimit = Math.max(limit * 5, 50);
+        List<Long> candidateReviewIds = userBehaviorLogMapper.getHotReviewCandidateIds(days, candidateLimit);
+        if (candidateReviewIds == null || candidateReviewIds.isEmpty()) {
+            return getLatestReviewFallback(limit);
+        }
+
+        Map<Long, BookReview> reviewMap = reviewUserMapper.selectBatchIds(candidateReviewIds).stream()
+                .collect(Collectors.toMap(BookReview::getId, it -> it, (a, b) -> a));
+
+        LocalDateTime now = LocalDateTime.now();
+        List<HotReviewVO> rankedReviews = new ArrayList<>();
+        for (Long reviewId : candidateReviewIds) {
+            BookReview review = reviewMap.get(reviewId);
+            if (review == null) {
+                continue;
+            }
+            List<UserBehaviorLog> behaviors = userBehaviorLogMapper.getReviewRecentBehaviors(reviewId, days);
+            if (behaviors == null || !hotReviewRecDomain.enoughActions(behaviors.size())) {
+                continue;
+            }
+            HotReviewVO vo = toHotReviewVO(review);
+            vo.setHotScore(hotReviewRecDomain.calculateHotScore(behaviors, now));
+            rankedReviews.add(vo);
+        }
+
+        rankedReviews.sort((a, b) -> Double.compare(
+                b.getHotScore(),
+                a.getHotScore()
+        ));
+        List<HotReviewVO> hotReviews = rankedReviews.stream().limit(limit).collect(Collectors.toList());
+
+        if (hotReviews.size() < limit) {
+            int need = limit - hotReviews.size();
+            List<HotReviewVO> fallbackLatest = getLatestReviewFallback(limit);
+            Set<Long> existed = hotReviews.stream().map(HotReviewVO::getReviewId).collect(Collectors.toSet());
+            for (HotReviewVO item : fallbackLatest) {
+                if (item.getReviewId() == null || existed.contains(item.getReviewId())) {
+                    continue;
+                }
+                hotReviews.add(item);
+                existed.add(item.getReviewId());
+                if (--need <= 0) {
+                    break;
+                }
+            }
+        }
+        for (int i = 0; i < hotReviews.size(); i++) {
+            hotReviews.get(i).setRank(i + 1);
+        }
+        return hotReviews;
+    }
+
+    private int resolveReviewDays(String period) {
+        switch (normalizeReviewPeriod(period)) {
+            case "daily":
+                return 1;
+            case "monthly":
+                return 30;
+            case "weekly":
+            default:
+                return 7;
+        }
+    }
+
+    private List<HotReviewVO> getLatestReviewFallback(int limit) {
+        LambdaQueryWrapper<BookReview> query = new LambdaQueryWrapper<>();
+        query.orderByDesc(BookReview::getCreateTime).last("LIMIT " + limit);
+        return reviewUserMapper.selectList(query).stream().map(this::toHotReviewVO).collect(Collectors.toList());
+    }
+
+    private HotReviewVO toHotReviewVO(BookReview review) {
+        HotReviewVO vo = new HotReviewVO();
+        vo.setReviewId(review.getId());
+        vo.setTitle(review.getTitle());
+        vo.setContent(review.getContent());
+        vo.setBookId(review.getBookId());
+        vo.setLikeCount(review.getLikeCount() == null ? 0L : review.getLikeCount().longValue());
+        vo.setCommentCount(review.getReplyCount() == null ? 0L : review.getReplyCount().longValue());
+        vo.setHotScore(review.getHotScore());
+        vo.setCreateTime(review.getCreateTime());
+        vo.setTimeDesc(TimeUtils.getTimeDesc(review.getCreateTime()));
+
+        UserInfo author = userInfoUserMapper.selectById(review.getUserId());
+        if (author != null) {
+            vo.setAuthor(author.getNickname());
+            vo.setAuthorAvatar(author.getAvatarUrl());
+        }
+        Book book = bookUserMapper.selectById(review.getBookId());
+        if (book != null) {
+            vo.setBookName(book.getTitle());
+            vo.setBookCover(book.getCoverUrl());
+            vo.setCategoryId(book.getCategoryId());
+        }
+        return vo;
+    }
+
+    private String normalizeReviewPeriod(String period) {
+        if (period == null || period.isBlank()) {
+            return "weekly";
+        }
+        String p = period.trim().toLowerCase();
+        switch (p) {
+            case "24h":
+            case "1d":
+            case "day":
+            case "daily":
+                return "daily";
+            case "7d":
+            case "week":
+            case "weekly":
+                return "weekly";
+            case "30d":
+            case "month":
+            case "monthly":
+                return "monthly";
+            default:
+                return "weekly";
+        }
+    }
+
+    private Duration resolveReviewCacheTtl(String period) {
+        switch (period) {
+            case "daily":
+                return Duration.ofMinutes(15);
+            case "monthly":
+                return Duration.ofHours(2);
+            case "weekly":
+            default:
+                return Duration.ofHours(1);
+        }
     }
 
     /**
