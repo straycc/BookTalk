@@ -1,7 +1,7 @@
 package com.cc.booktalk.application.user.service.notification;
 
 import com.cc.booktalk.common.websocket.WebSocketMessage;
-import com.cc.booktalk.entity.vo.NotificationVO;
+import com.cc.booktalk.interfaces.vo.user.notification.NotificationVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;

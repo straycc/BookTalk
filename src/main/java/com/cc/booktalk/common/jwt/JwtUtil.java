@@ -4,7 +4,7 @@ import cn.hutool.jwt.JWT;
 import cn.hutool.jwt.JWTUtil;
 import cn.hutool.core.date.DateUtil;
 import com.cc.booktalk.common.exception.BaseException;
-import com.cc.booktalk.entity.dto.user.UserDTO;
+import com.cc.booktalk.interfaces.dto.user.UserDTO;
 
 import java.util.Date;
 import java.util.HashMap;

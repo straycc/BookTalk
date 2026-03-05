@@ -2,25 +2,27 @@ package com.cc.booktalk.application.user.service.comment.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.cc.booktalk.application.user.service.recommendation.UserBehaviorEventDispatchService;
 import com.cc.booktalk.common.constant.BusinessConstant;
 import com.cc.booktalk.common.constant.RedisCacheConstant;
 import com.cc.booktalk.common.context.UserContext;
 import com.cc.booktalk.common.event.NotificationEventPublisher;
+import com.cc.booktalk.common.event.behavior.UserBehaviorEvent;
 import com.cc.booktalk.common.event.request.NotificationRequest;
 import com.cc.booktalk.common.exception.BaseException;
 import com.cc.booktalk.common.utils.CheckPageParam;
 import com.cc.booktalk.common.utils.ConvertUtils;
 import com.cc.booktalk.common.utils.EnumUtil;
-import com.cc.booktalk.entity.dto.comment.CommentDTO;
-import com.cc.booktalk.entity.dto.user.UserDTO;
-import com.cc.booktalk.entity.result.PageResult;
-import com.cc.booktalk.entity.dto.comment.CommentPageDTO;
-import com.cc.booktalk.entity.entity.review.BookReview;
-import com.cc.booktalk.entity.entity.comment.Comment;
-import com.cc.booktalk.entity.entity.user.UserInfo;
-import com.cc.booktalk.entity.enums.TargetType;
-import com.cc.booktalk.entity.vo.CommentVO;
-import com.cc.booktalk.entity.vo.user.UserVO;
+import com.cc.booktalk.interfaces.dto.user.comment.CommentDTO;
+import com.cc.booktalk.interfaces.dto.user.UserDTO;
+import com.cc.booktalk.common.result.PageResult;
+import com.cc.booktalk.interfaces.dto.user.comment.CommentPageDTO;
+import com.cc.booktalk.domain.entity.review.BookReview;
+import com.cc.booktalk.domain.entity.comment.Comment;
+import com.cc.booktalk.domain.entity.user.UserInfo;
+import com.cc.booktalk.domain.enums.TargetType;
+import com.cc.booktalk.interfaces.vo.user.comment.CommentVO;
+import com.cc.booktalk.interfaces.vo.user.user.UserVO;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.comment.CommentUserMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.review.ReviewUserMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserInfoUserMapper;
@@ -75,48 +77,76 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
     @Resource
     private NotificationEventPublisher notificationEventPublisher;
 
+    @Resource
+    private UserBehaviorEventDispatchService userBehaviorEventDispatchService;
+
 
     /**
      * 发表评论
-     * @param targetId
+     * @param rootId
      * @param commentDTO
      */
     @Override
-    public void commentPublish(Long targetId, CommentDTO commentDTO) {
-
-        // 检查参数
-        if(targetId == null || commentDTO == null || !targetId.equals(commentDTO.getTargetId())){
+    public void commentPublish(Long rootId, CommentDTO commentDTO) {
+        if (rootId == null || commentDTO == null || commentDTO.getRootId() == null) {
+            throw new BaseException(BusinessConstant.PARAM_ERROR);
+        }
+        if (!rootId.equals(commentDTO.getRootId())) {
             throw new BaseException(BusinessConstant.PARAM_ERROR);
         }
         if (commentDTO.getContent() == null || commentDTO.getContent().trim().isEmpty()) {
             throw new BaseException(BusinessConstant.COMMENT_ISEMPTY);
         }
 
-        // 检查目标枚举类型,并获取目标枚举值
-         TargetType targetType = EnumUtil.fromCode(TargetType.class,commentDTO.getTargetType());
+        TargetType finalTargetType = EnumUtil.fromCode(TargetType.class, commentDTO.getTargetType());
+        Long finalRootId = rootId;
 
-        // 检查父级评论（为空：直接评论书评， 不为空：是否存在）
-        if(commentDTO.getParentId()!=null){
-            Comment  parent = commentUserMapper.selectById(commentDTO.getParentId());
-            if(parent==null){
+        if (commentDTO.getParentId() != null) {// 评论的评论
+            Comment parent = commentUserMapper.selectById(commentDTO.getParentId());
+            if (parent == null) {
                 throw new BaseException(BusinessConstant.PARENTCOMMENT_NOTEXIST);
             }
+            finalRootId = parent.getRootId();
+            finalTargetType = parent.getTargetType(); // 继承父评论归属类型
+        } else {
+            // 一级评论时校验 root 对象存在，这里只校验了Review
+            if (finalTargetType == TargetType.BOOKREVIEW && reviewUserMapper.selectById(finalRootId) ==
+                    null) {
+                throw new BaseException(BusinessConstant.REVIEW_NOTEXIST);
+            }
+            //TODO： 后续扩展书单完善
         }
 
-        //存入数据仓库
         Comment comment = Comment.builder()
-                .targetId(targetId)
-                .content(commentDTO.getContent())
-                .targetType(targetType)
+                .rootId(finalRootId)
+                .targetType(finalTargetType)
                 .parentId(commentDTO.getParentId())
+                .content(commentDTO.getContent())
                 .userId(UserContext.getUser().getId())
                 .createTime(LocalDateTime.now())
                 .build();
 
+        //评论入库
         commentUserMapper.insert(comment);
 
-        // 发布评论通知
-        publishCommentNotification(comment, targetType);
+        // 评论行为埋点（一级评论 / 回复评论）
+        if (finalTargetType == TargetType.BOOKREVIEW) {
+            String behaviorType = commentDTO.getParentId() == null ? "REVIEW_COMMENT" : "REVIEW_REPLY";
+            double behaviorScore = commentDTO.getParentId() == null ? 2.5 : 3.0;
+            UserBehaviorEvent userBehaviorEvent = UserBehaviorEvent.builder()
+                    .userId(UserContext.getUser().getId())
+                    .targetId(finalRootId)          // 用 rootId（归属书评ID）
+                    .targetType("REVIEW")
+                    .behaviorType(behaviorType)
+                    .behaviorScore(behaviorScore)
+                    .occurredAt(LocalDateTime.now())
+                    .build();
+
+            userBehaviorEventDispatchService.publish(userBehaviorEvent);
+        }
+
+        //消息通知
+        publishCommentNotification(comment, finalTargetType);
     }
 
 
@@ -217,7 +247,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
         // 查询书评的一级评论
         List<Comment> firstComments = commentUserMapper.selectList(
                 new LambdaQueryWrapper<Comment>()
-                        .eq(Comment::getTargetId, bookReviewId)
+                        .eq(Comment::getRootId, bookReviewId)
                         .eq(Comment::getTargetType, TargetType.BOOKREVIEW.getCode())
                         .isNull(Comment::getParentId)
                         .orderByDesc(Comment::getCreateTime)
@@ -226,7 +256,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
         // 查询所有子评论
         List<Comment> childComments = commentUserMapper.selectList(
                 new LambdaQueryWrapper<Comment>()
-                        .eq(Comment::getTargetId, bookReviewId)
+                        .eq(Comment::getRootId, bookReviewId)
                         .eq(Comment::getTargetType, TargetType.BOOKREVIEW.getCode())
                         .isNotNull(Comment::getParentId)
                         .orderByAsc(Comment::getCreateTime)
@@ -353,7 +383,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
      */
     private void publishBookReviewCommentNotification(Comment comment, UserDTO currentUser) {
         // 查询书评信息
-        BookReview bookReview = reviewUserMapper.selectById(comment.getTargetId());
+        BookReview bookReview = reviewUserMapper.selectById(comment.getRootId());
         if (bookReview == null || bookReview.getUserId().equals(currentUser.getId())) {
             // 书评不存在或者是自己评论自己的书评，不发送通知
             return;
@@ -362,7 +392,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
         // 创建评论通知请求
         NotificationRequest request = NotificationRequest.comment(
                 bookReview.getUserId(),               // 接收通知的用户ID（书评作者）
-                comment.getTargetId(),               // 目标ID（书评ID）
+                comment.getRootId(),               // 目标ID（书评ID）
                 NotificationRequest.TargetType.BOOK_REVIEW, // 目标类型
                 comment.getContent(),               // 评论内容
                 currentUser.getId(),                 // 评论者ID

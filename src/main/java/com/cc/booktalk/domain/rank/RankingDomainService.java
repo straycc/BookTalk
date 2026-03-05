@@ -1,6 +1,6 @@
 package com.cc.booktalk.domain.rank;
 
-import com.cc.booktalk.entity.entity.recommendation.UserBehaviorLog;
+import com.cc.booktalk.domain.entity.recommendation.UserBehaviorLog;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

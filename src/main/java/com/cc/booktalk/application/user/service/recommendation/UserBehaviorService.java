@@ -1,6 +1,6 @@
 package com.cc.booktalk.application.user.service.recommendation;
 
-import com.cc.booktalk.entity.dto.behavior.UserBehaviorDTO;
+import com.cc.booktalk.common.event.behavior.UserBehaviorEvent;
 
 import java.util.List;
 
@@ -17,7 +17,7 @@ public interface UserBehaviorService {
      *
      * @param behaviorDTO 行为数据
      */
-    void recordUserBehavior(UserBehaviorDTO behaviorDTO);
+    void recordUserBehavior(UserBehaviorEvent behaviorDTO);
 
     /**
      * 获取活跃用户列表

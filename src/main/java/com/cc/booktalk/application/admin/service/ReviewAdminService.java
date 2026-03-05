@@ -1,7 +1,7 @@
 package com.cc.booktalk.application.admin.service;
 
-import com.cc.booktalk.entity.dto.admin.AdminBookReviewDTO;
-import com.cc.booktalk.entity.entity.review.BookReview;
+import com.cc.booktalk.interfaces.dto.admin.AdminBookReviewDTO;
+import com.cc.booktalk.domain.entity.review.BookReview;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**

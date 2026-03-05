@@ -1,6 +1,6 @@
 package com.cc.booktalk.application.user.service.recommendation;
 
-import com.cc.booktalk.entity.entity.recommendation.UserInterestTag;
+import com.cc.booktalk.domain.entity.recommendation.UserInterestTag;
 
 import java.util.List;
 

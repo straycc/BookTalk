@@ -1,6 +1,6 @@
 package com.cc.booktalk.application.user.service.rank.impl;
 
-import com.cc.booktalk.entity.entity.recommendation.UserInterestTag;
+import com.cc.booktalk.domain.entity.recommendation.UserInterestTag;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserInterestTagMapper;
 import com.cc.booktalk.application.user.service.recommendation.UserInterestService;
 import lombok.extern.slf4j.Slf4j;

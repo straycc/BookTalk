@@ -1,8 +1,8 @@
 package com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.cc.booktalk.entity.entity.recommendation.UserInterestTag;
-import com.cc.booktalk.entity.vo.PersonalizedRecVO;
+import com.cc.booktalk.domain.entity.recommendation.UserInterestTag;
+import com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

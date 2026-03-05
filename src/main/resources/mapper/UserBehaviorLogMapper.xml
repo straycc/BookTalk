@@ -6,7 +6,7 @@
 
 
     <!-- 获取用户高分书籍（基于行为日志） -->
-    <select id="getHighScoreBooks" resultType="com.cc.booktalk.entity.vo.PersonalizedRecVO">
+    <select id="getHighScoreBooks" resultType="com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO">
         SELECT
             b.id as bookId,
             b.title as bookTitle,
@@ -26,7 +26,7 @@
         FROM user_behavior_log ubl
         INNER JOIN book b ON ubl.target_id = b.id
         WHERE ubl.user_id = #{userId}
-          AND ubl.target_type = 'BOOK'
+          AND UPPER(ubl.target_type) = 'BOOK'
           AND ubl.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY) -- 最近30天的行为
         GROUP BY b.id, b.title, b.author, b.cover_url
         HAVING score > 1.0 -- 只推荐有较高分数的书籍
@@ -35,7 +35,7 @@
     </select>
 
     <!-- 获取热门书籍 -->
-    <select id="getHotBooks" resultType="com.cc.booktalk.entity.vo.PersonalizedRecVO">
+    <select id="getHotBooks" resultType="com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO">
         SELECT
             b.id as bookId,
             b.title as bookTitle,
@@ -55,7 +55,7 @@
             '热门推荐' as reason
         FROM user_behavior_log ubl
         INNER JOIN book b ON ubl.target_id = b.id
-        WHERE ubl.target_type = 'BOOK'
+        WHERE UPPER(ubl.target_type) = 'BOOK'
           AND ubl.create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY) -- 最近7天的行为
         GROUP BY b.id, b.title, b.author, b.cover_url
         HAVING COUNT(*) >= 5 -- 至少5次行为
@@ -72,6 +72,43 @@
         HAVING COUNT(*) >= #{minActions}
         ORDER BY MAX(create_time) DESC, COUNT(*) DESC
         LIMIT 10000
+    </select>
+
+    <!-- 获取热门书籍候选ID（先按行为活跃度做初筛） -->
+    <select id="getHotBookCandidateIds" resultType="java.lang.Long">
+        SELECT target_id
+        FROM user_behavior_log
+        WHERE (
+                UPPER(target_type) = 'BOOK'
+                OR behavior_type LIKE 'BOOK_%'
+              )
+          AND target_id IS NOT NULL
+          AND create_time >= DATE_SUB(NOW(), INTERVAL #{days} DAY)
+        GROUP BY target_id
+        HAVING COUNT(*) >= 2
+        ORDER BY COUNT(*) DESC, MAX(create_time) DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 获取单本书的近期行为记录 -->
+    <select id="getBookRecentBehaviors" resultType="com.cc.booktalk.domain.entity.recommendation.UserBehaviorLog">
+        SELECT
+            id,
+            user_id,
+            target_id,
+            target_type,
+            behavior_type,
+            behavior_score,
+            extra_data,
+            create_time
+        FROM user_behavior_log
+        WHERE (
+                UPPER(target_type) = 'BOOK'
+                OR behavior_type LIKE 'BOOK_%'
+              )
+          AND target_id = #{bookId}
+          AND create_time >= DATE_SUB(NOW(), INTERVAL #{days} DAY)
+        ORDER BY create_time DESC
     </select>
 
 </mapper>

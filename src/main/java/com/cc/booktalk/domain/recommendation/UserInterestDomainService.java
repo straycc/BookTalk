@@ -14,8 +14,12 @@ public class UserInterestDomainService {
     }
 
     public Long resolveBookIdByBehavior(String behaviorType, Long targetId, Long reviewBookId) {
-        if (behaviorType.startsWith("BOOK_")) return targetId;
-        if (behaviorType.startsWith("REVIEW_")) return reviewBookId;
+        if (behaviorType == null) {
+            return null;
+        }
+        String normalizedBehaviorType = behaviorType.trim().toUpperCase();
+        if (normalizedBehaviorType.startsWith("BOOK_")) return targetId;
+        if (normalizedBehaviorType.startsWith("REVIEW_")) return reviewBookId;
         return null;
     }
 

@@ -1,8 +1,8 @@
 package com.cc.booktalk.infrastructure.persistence.user.mapper.notification;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.cc.booktalk.entity.dto.notification.NotificationQueryDTO;
-import com.cc.booktalk.entity.entity.notification.Notification;
+import com.cc.booktalk.interfaces.dto.user.notification.NotificationQueryDTO;
+import com.cc.booktalk.domain.entity.notification.Notification;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

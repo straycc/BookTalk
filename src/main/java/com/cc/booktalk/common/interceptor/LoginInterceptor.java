@@ -4,7 +4,7 @@ import cn.hutool.http.HttpStatus;
 import cn.hutool.jwt.JWT;
 import com.cc.booktalk.common.context.UserContext;
 import com.cc.booktalk.common.jwt.JwtUtil;
-import com.cc.booktalk.entity.dto.user.UserDTO;
+import com.cc.booktalk.interfaces.dto.user.UserDTO;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -21,6 +21,11 @@ public class LoginInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        // CORS 预检请求直接放行，避免浏览器跨域请求被拦截
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
+
         // 1. 从请求头中获取 token
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {

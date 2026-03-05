@@ -1,6 +1,6 @@
 package com.cc.booktalk.application.user.service.recommendation;
 
-import com.cc.booktalk.entity.dto.behavior.UserBehaviorDTO;
+import com.cc.booktalk.common.event.behavior.UserBehaviorEvent;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -14,7 +14,7 @@ public class UserBehaviorMessageService {
     @Resource
     private UserBehaviorInterestService userBehaviorInterestService;
 
-    public void processUserBehavior(UserBehaviorDTO behaviorDTO) {
+    public void processUserBehavior(UserBehaviorEvent behaviorDTO) {
         userBehaviorService.recordUserBehavior(behaviorDTO);
         userBehaviorInterestService.updateUserInterest(behaviorDTO);
     }

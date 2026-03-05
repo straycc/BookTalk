@@ -1,6 +1,6 @@
 package com.cc.booktalk.common.converter;
-import com.cc.booktalk.entity.entity.review.BookReview;
-import com.cc.booktalk.entity.vo.HotReviewVO;
+import com.cc.booktalk.domain.entity.review.BookReview;
+import com.cc.booktalk.interfaces.vo.user.review.HotReviewVO;
 
 public class ReviewConverter {
 

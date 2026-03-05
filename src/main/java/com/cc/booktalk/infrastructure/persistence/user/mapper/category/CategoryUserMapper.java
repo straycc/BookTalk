@@ -1,7 +1,7 @@
 package com.cc.booktalk.infrastructure.persistence.user.mapper.category;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.cc.booktalk.entity.entity.category.Category;
+import com.cc.booktalk.domain.entity.category.Category;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

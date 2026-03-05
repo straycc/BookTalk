@@ -1,11 +1,11 @@
 package com.cc.booktalk.application.user.service.bookShelf;
 
-import com.cc.booktalk.entity.dto.bookShelf.BookShelfAddDTO;
-import com.cc.booktalk.entity.dto.bookShelf.BookShelfQueryDTO;
-import com.cc.booktalk.entity.entity.bookShelf.BookShelf;
-import com.cc.booktalk.entity.result.PageResult;
-import com.cc.booktalk.entity.vo.BookShelfVO;
-import com.cc.booktalk.entity.vo.BookShelfStatsVO;
+import com.cc.booktalk.interfaces.dto.user.bookShelf.BookShelfAddDTO;
+import com.cc.booktalk.interfaces.dto.user.bookShelf.BookShelfQueryDTO;
+import com.cc.booktalk.domain.entity.bookShelf.BookShelf;
+import com.cc.booktalk.common.result.PageResult;
+import com.cc.booktalk.interfaces.vo.user.bookShelf.BookShelfVO;
+import com.cc.booktalk.interfaces.vo.user.bookShelf.BookShelfStatsVO;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**

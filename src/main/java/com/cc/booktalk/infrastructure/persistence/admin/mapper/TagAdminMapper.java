@@ -1,6 +1,6 @@
 package com.cc.booktalk.infrastructure.persistence.admin.mapper;
 
-import com.cc.booktalk.entity.entity.tag.Tag;
+import com.cc.booktalk.domain.entity.tag.Tag;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;

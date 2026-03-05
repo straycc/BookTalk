@@ -8,14 +8,14 @@ import com.cc.booktalk.common.constant.BusinessConstant;
 import com.cc.booktalk.common.context.UserContext;
 import com.cc.booktalk.common.exception.BaseException;
 import com.cc.booktalk.common.utils.CheckPageParam;
-import com.cc.booktalk.entity.result.PageResult;
-import com.cc.booktalk.entity.dto.review.BookReviewDTO;
-import com.cc.booktalk.entity.dto.review.PageReviewDTO;
-import com.cc.booktalk.entity.entity.review.BookReview;
-import com.cc.booktalk.entity.entity.comment.Comment;
-import com.cc.booktalk.entity.entity.user.UserInfo;
-import com.cc.booktalk.entity.vo.BookReviewVO;
-import com.cc.booktalk.entity.enums.TargetType;
+import com.cc.booktalk.common.result.PageResult;
+import com.cc.booktalk.interfaces.dto.user.review.BookReviewDTO;
+import com.cc.booktalk.interfaces.dto.user.review.PageReviewDTO;
+import com.cc.booktalk.domain.entity.review.BookReview;
+import com.cc.booktalk.domain.entity.comment.Comment;
+import com.cc.booktalk.domain.entity.user.UserInfo;
+import com.cc.booktalk.interfaces.vo.user.review.BookReviewVO;
+import com.cc.booktalk.domain.enums.TargetType;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.book.BookUserMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.comment.CommentUserMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.review.ReviewUserMapper;
@@ -212,7 +212,7 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
 
                     // 查询评论数
                     LambdaQueryWrapper<Comment> commentWrapper = new LambdaQueryWrapper<>();
-                    commentWrapper.eq(Comment::getTargetId, review.getId())
+                    commentWrapper.eq(Comment::getRootId, review.getId())
                                   .eq(Comment::getTargetType, TargetType.BOOKREVIEW);
                     Long commentCount = commentUserMapper.selectCount(commentWrapper);
                     vo.setCommentCount(commentCount.intValue());
@@ -253,7 +253,7 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
 
         // 查询评论数
         LambdaQueryWrapper<Comment> commentWrapper = new LambdaQueryWrapper<>();
-        commentWrapper.eq(Comment::getTargetId, bookReviewId)
+        commentWrapper.eq(Comment::getRootId, bookReviewId)
                       .eq(Comment::getTargetType, TargetType.BOOKREVIEW);
         Long commentCount = commentUserMapper.selectCount(commentWrapper);
         bookReviewVO.setCommentCount(commentCount.intValue());

@@ -1,6 +1,6 @@
 package com.cc.booktalk.common.context;
 
-import com.cc.booktalk.entity.dto.user.UserDTO;
+import com.cc.booktalk.interfaces.dto.user.UserDTO;
 
 public class UserContext {
 

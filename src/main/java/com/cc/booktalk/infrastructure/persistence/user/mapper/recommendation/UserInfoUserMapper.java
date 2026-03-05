@@ -1,7 +1,7 @@
 package com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.cc.booktalk.entity.entity.user.UserInfo;
+import com.cc.booktalk.domain.entity.user.UserInfo;
 import org.apache.ibatis.annotations.Mapper;
 
 /**

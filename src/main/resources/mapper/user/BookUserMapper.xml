@@ -2,4 +2,42 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.cc.booktalk.infrastructure.persistence.user.mapper.book.BookUserMapper">
 
+    <select id="getRecBookBaseByIds" resultType="com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO">
+        SELECT
+            b.id AS bookId,
+            b.title AS bookTitle,
+            b.author AS author,
+            b.cover_url AS bookCover,
+            0 AS score,
+            '热门推荐' AS reason
+        FROM book b
+        WHERE b.id IN
+        <foreach collection="bookIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="getFallbackHotBooks" resultType="com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO">
+        SELECT
+            b.id AS bookId,
+            b.title AS bookTitle,
+            b.author AS author,
+            b.cover_url AS bookCover,
+            (
+                COALESCE(b.hot_score, 0) * 0.5
+                + COALESCE(b.favorite_count, 0) * 0.2
+                + COALESCE(b.score_count, 0) * 0.2
+                + COALESCE(b.average_score, 0) * 0.1
+            ) AS score,
+            '基础热门推荐' AS reason
+        FROM book b
+        ORDER BY
+            COALESCE(b.hot_score, 0) DESC,
+            COALESCE(b.favorite_count, 0) DESC,
+            COALESCE(b.score_count, 0) DESC,
+            COALESCE(b.average_score, 0) DESC,
+            b.create_time DESC
+        LIMIT #{limit}
+    </select>
+
 </mapper>

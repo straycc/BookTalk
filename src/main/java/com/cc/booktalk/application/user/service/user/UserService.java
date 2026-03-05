@@ -1,12 +1,12 @@
 package com.cc.booktalk.application.user.service.user;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.cc.booktalk.entity.dto.user.UserLoginDTO;
-import com.cc.booktalk.entity.dto.user.UserProfileDTO;
-import com.cc.booktalk.entity.dto.user.UserRegisterDTO;
-import com.cc.booktalk.entity.entity.user.User;
-import com.cc.booktalk.entity.vo.user.UserLoginVO;
-import com.cc.booktalk.entity.vo.user.UserVO;
+import com.cc.booktalk.interfaces.dto.user.UserLoginDTO;
+import com.cc.booktalk.interfaces.dto.user.UserProfileDTO;
+import com.cc.booktalk.interfaces.dto.user.UserRegisterDTO;
+import com.cc.booktalk.domain.entity.user.User;
+import com.cc.booktalk.interfaces.vo.user.user.UserLoginVO;
+import com.cc.booktalk.interfaces.vo.user.user.UserVO;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;

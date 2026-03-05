@@ -1,7 +1,7 @@
 package com.cc.booktalk.application.user.service.recommendation.impl;
 
-import com.cc.booktalk.entity.dto.behavior.UserBehaviorDTO;
-import com.cc.booktalk.entity.entity.recommendation.UserBehaviorLog;
+import com.cc.booktalk.common.event.behavior.UserBehaviorEvent;
+import com.cc.booktalk.domain.entity.recommendation.UserBehaviorLog;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserBehaviorLogMapper;
 import com.cc.booktalk.application.user.service.recommendation.UserBehaviorService;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +30,7 @@ public class UserBehaviorServiceImpl implements UserBehaviorService {
      * @param behaviorDTO 行为数据
      */
     @Override
-    public void recordUserBehavior(UserBehaviorDTO behaviorDTO) {
+    public void recordUserBehavior(UserBehaviorEvent behaviorDTO) {
         try {
             // 转换DTO为实体
             UserBehaviorLog behaviorLog = convertToEntity(behaviorDTO);
@@ -51,9 +51,14 @@ public class UserBehaviorServiceImpl implements UserBehaviorService {
     /**
      * 将DTO转换为实体类
      */
-    private UserBehaviorLog convertToEntity(UserBehaviorDTO behaviorDTO) {
+    private UserBehaviorLog convertToEntity(UserBehaviorEvent behaviorEvent) {
         UserBehaviorLog behaviorLog = new UserBehaviorLog();
-        BeanUtils.copyProperties(behaviorDTO, behaviorLog);
+        BeanUtils.copyProperties(behaviorEvent, behaviorLog);
+
+        // 事件发生时间字段映射到行为日志创建时间
+        if (behaviorEvent.getOccurredAt() != null) {
+            behaviorLog.setCreateTime(behaviorEvent.getOccurredAt());
+        }
 
         // 设置创建时间
         if (behaviorLog.getCreateTime() == null) {
@@ -62,7 +67,7 @@ public class UserBehaviorServiceImpl implements UserBehaviorService {
 
         // 设置默认行为分数
         if (behaviorLog.getBehaviorScore() == null) {
-            behaviorLog.setBehaviorScore(getDefaultBehaviorScore(behaviorDTO.getBehaviorType()));
+            behaviorLog.setBehaviorScore(getDefaultBehaviorScore(behaviorEvent.getBehaviorType()));
         }
 
         return behaviorLog;
@@ -72,15 +77,25 @@ public class UserBehaviorServiceImpl implements UserBehaviorService {
      * 获取默认行为分数
      */
     private Double getDefaultBehaviorScore(String behaviorType) {
-        switch (behaviorType) {
+        if (behaviorType == null) {
+            return 1.0;
+        }
+        String normalizedBehaviorType = behaviorType.trim().toUpperCase();
+        switch (normalizedBehaviorType) {
             case "BOOK_VIEW":
                 return 1.0;    // 浏览书籍 - 基础兴趣
+            case "BOOK_LIKE":
+                return 3.0;    // 点赞书籍 - 中等偏强兴趣
             case "BOOK_COLLECT":
                 return 5.0;    // 收藏书籍 - 强兴趣
+            case "BOOK_SCORE":
+                return 4.0;    // 评分书籍 - 中等偏强兴趣（若传具体评分则以传入为准）
             case "BOOK_REVIEW":
                 return 4.0;    // 评论书籍 - 较强兴趣
             case "REVIEW_LIKE":
                 return 2.0;    // 点赞评论 - 中等兴趣
+            case "REVIEW_COMMENT":
+                return 2.5;    // 一级评论书评 - 中等兴趣
             case "REVIEW_REPLY":
                 return 3.0;    // 回复评论 - 较强兴趣
             default:

@@ -1,7 +1,7 @@
 package com.cc.booktalk.interfaces.websocket;
 
 import com.cc.booktalk.common.websocket.WebSocketMessage;
-import com.cc.booktalk.config.SpringEndpointConfigurator;
+import com.cc.booktalk.interfaces.config.SpringEndpointConfigurator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 

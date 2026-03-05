@@ -1,6 +1,6 @@
 package com.cc.booktalk.application.user.service.recommendation;
 
-import com.cc.booktalk.entity.vo.PersonalizedRecVO;
+import com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO;
 import java.util.List;
 
 /**
@@ -50,6 +50,14 @@ public interface RecommendationService {
      * @return 推荐书籍列表
      */
     List<PersonalizedRecVO> getHotRecommendations(Integer limit);
+
+    /**
+     * 刷新热门推荐缓存（定时任务调用）
+     *
+     * @param limit 缓存的推荐数量
+     * @return 刷新后的热门推荐列表
+     */
+    List<PersonalizedRecVO> refreshHotRecommendationsCache(Integer limit);
 
     /**
      * 清除用户推荐缓存

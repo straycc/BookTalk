@@ -1,9 +1,9 @@
 package com.cc.booktalk.application.user.service.tag;
 
-import com.cc.booktalk.entity.dto.tag.TagDTO;
-import com.cc.booktalk.entity.entity.tag.Tag;
+import com.cc.booktalk.interfaces.dto.user.tag.TagDTO;
+import com.cc.booktalk.domain.entity.tag.Tag;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.cc.booktalk.entity.vo.TagVO;
+import com.cc.booktalk.interfaces.vo.user.tag.TagVO;
 
 import java.util.List;
 

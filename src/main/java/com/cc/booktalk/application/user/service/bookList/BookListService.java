@@ -1,12 +1,12 @@
 package com.cc.booktalk.application.user.service.bookList;
 
-import com.cc.booktalk.entity.dto.bookList.BookListDTO;
-import com.cc.booktalk.entity.dto.bookList.BookListPageDTO;
-import com.cc.booktalk.entity.entity.bookList.BookList;
+import com.cc.booktalk.interfaces.dto.user.bookList.BookListDTO;
+import com.cc.booktalk.interfaces.dto.user.bookList.BookListPageDTO;
+import com.cc.booktalk.domain.entity.bookList.BookList;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.cc.booktalk.entity.result.PageResult;
-import com.cc.booktalk.entity.vo.BookListDetailVO;
-import com.cc.booktalk.entity.vo.BookListVO;
+import com.cc.booktalk.common.result.PageResult;
+import com.cc.booktalk.interfaces.vo.user.bookList.BookListDetailVO;
+import com.cc.booktalk.interfaces.vo.user.bookList.BookListVO;
 
 /**
  * <p>

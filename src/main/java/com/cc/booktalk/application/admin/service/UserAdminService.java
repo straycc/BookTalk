@@ -1,11 +1,11 @@
 package com.cc.booktalk.application.admin.service;
 
-import com.cc.booktalk.entity.result.PageResult;
-import com.cc.booktalk.entity.dto.admin.PageUserDTO;
-import com.cc.booktalk.entity.dto.user.UserLoginDTO;
-import com.cc.booktalk.entity.entity.user.User;
+import com.cc.booktalk.common.result.PageResult;
+import com.cc.booktalk.interfaces.dto.admin.PageUserDTO;
+import com.cc.booktalk.interfaces.dto.user.UserLoginDTO;
+import com.cc.booktalk.domain.entity.user.User;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.cc.booktalk.entity.vo.user.UserLoginVO;
+import com.cc.booktalk.interfaces.vo.user.user.UserLoginVO;
 
 /**
  * <p>

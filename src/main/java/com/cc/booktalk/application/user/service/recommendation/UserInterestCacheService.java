@@ -1,6 +1,6 @@
 package com.cc.booktalk.application.user.service.recommendation;
 
-import com.cc.booktalk.entity.entity.recommendation.UserInterestTag;
+import com.cc.booktalk.domain.entity.recommendation.UserInterestTag;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserInterestTagMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -17,7 +17,7 @@ public class UserInterestCacheService {
     @Resource
     private UserInterestTagMapper userInterestTagMapper;
 
-    @Resource
+    @Resource(name = "customObjectRedisTemplate")
     private RedisTemplate<String, Object> redisTemplate;
 
     /**

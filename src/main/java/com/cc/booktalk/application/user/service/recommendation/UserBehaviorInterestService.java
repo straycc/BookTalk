@@ -1,9 +1,9 @@
 package com.cc.booktalk.application.user.service.recommendation;
 
-import com.cc.booktalk.entity.dto.behavior.UserBehaviorDTO;
-import com.cc.booktalk.entity.entity.book.Book;
-import com.cc.booktalk.entity.entity.review.BookReview;
-import com.cc.booktalk.entity.entity.tag.Tag;
+import com.cc.booktalk.common.event.behavior.UserBehaviorEvent;
+import com.cc.booktalk.domain.entity.book.Book;
+import com.cc.booktalk.domain.entity.review.BookReview;
+import com.cc.booktalk.domain.entity.tag.Tag;
 import com.cc.booktalk.application.user.service.book.BookUserService;
 import com.cc.booktalk.application.user.service.review.ReviewUserService;
 import com.cc.booktalk.application.user.service.tag.TagUserService;
@@ -42,24 +42,25 @@ public class UserBehaviorInterestService {
     /**
      * 根据用户行为更新兴趣分数
      */
-    public void updateUserInterest(UserBehaviorDTO behaviorDTO) {
+    public void updateUserInterest(UserBehaviorEvent behaviorDTO) {
         try {
             Long userId = behaviorDTO.getUserId();
             Long targetId = behaviorDTO.getTargetId();
             Double behaviorScore = behaviorDTO.getBehaviorScore();
             String behaviorType = behaviorDTO.getBehaviorType();
+            String normalizedBehaviorType = behaviorType == null ? null : behaviorType.trim().toUpperCase();
 
-            if (!userInterestDomainService.isValidBehavior(userId, targetId, behaviorScore, behaviorType)) {
+            if (!userInterestDomainService.isValidBehavior(userId, targetId, behaviorScore, normalizedBehaviorType)) {
                 log.warn("用户行为数据不完整，跳过兴趣更新: userId={}, behaviorType={}, targetId={}, behaviorScore={}",
-                        userId, behaviorType, targetId, behaviorScore);
+                        userId, normalizedBehaviorType, targetId, behaviorScore);
                 return;
             }
 
             Long reviewBookId = null;
-            if (behaviorType.startsWith("REVIEW_")) {
+            if (normalizedBehaviorType.startsWith("REVIEW_")) {
                 reviewBookId = getBookIdFromReview(targetId);
             }
-            Long bookId = userInterestDomainService.resolveBookIdByBehavior(behaviorType, targetId, reviewBookId);
+            Long bookId = userInterestDomainService.resolveBookIdByBehavior(normalizedBehaviorType, targetId, reviewBookId);
 
             if (bookId == null) {
                 log.warn("不支持的用户行为类型，跳过兴趣更新: userId={}, behaviorType={}", userId, behaviorType);

@@ -3,25 +3,27 @@ package com.cc.booktalk.application.user.service.like.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.cc.booktalk.application.user.service.recommendation.UserBehaviorEventDispatchService;
 import com.cc.booktalk.common.constant.BusinessConstant;
 import com.cc.booktalk.common.constant.RedisCacheConstant;
 import com.cc.booktalk.common.context.UserContext;
 import com.cc.booktalk.common.event.NotificationEventPublisher;
+import com.cc.booktalk.common.event.behavior.UserBehaviorEvent;
 import com.cc.booktalk.common.event.request.NotificationRequest;
 import com.cc.booktalk.common.exception.BaseException;
 import com.cc.booktalk.common.utils.CheckPageParam;
 import com.cc.booktalk.common.utils.EnumUtil;
-import com.cc.booktalk.entity.dto.user.UserDTO;
-import com.cc.booktalk.entity.entity.bookList.BookList;
-import com.cc.booktalk.entity.entity.comment.Comment;
-import com.cc.booktalk.entity.entity.like.LikeRecord;
-import com.cc.booktalk.entity.entity.review.BookReview;
-import com.cc.booktalk.entity.entity.user.UserInfo;
-import com.cc.booktalk.entity.result.PageResult;
-import com.cc.booktalk.entity.dto.like.LikePageDTO;
-import com.cc.booktalk.entity.dto.like.LikeRecordDTO;
-import com.cc.booktalk.entity.enums.LikeTargetType;
-import com.cc.booktalk.entity.vo.LikeRecordVO;
+import com.cc.booktalk.interfaces.dto.user.UserDTO;
+import com.cc.booktalk.domain.entity.bookList.BookList;
+import com.cc.booktalk.domain.entity.comment.Comment;
+import com.cc.booktalk.domain.entity.like.LikeRecord;
+import com.cc.booktalk.domain.entity.review.BookReview;
+import com.cc.booktalk.domain.entity.user.UserInfo;
+import com.cc.booktalk.common.result.PageResult;
+import com.cc.booktalk.interfaces.dto.user.like.LikePageDTO;
+import com.cc.booktalk.interfaces.dto.user.like.LikeRecordDTO;
+import com.cc.booktalk.domain.enums.LikeTargetType;
+import com.cc.booktalk.interfaces.vo.user.like.LikeRecordVO;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.bookList.BookListMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.comment.CommentUserMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.like.LikeRecordMapper;
@@ -32,6 +34,7 @@ import com.cc.booktalk.application.user.service.like.LikeRecordService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +52,7 @@ import java.util.stream.Collectors;
  * @since 2025-09-10
  */
 @Service
+@Slf4j
 public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRecord> implements LikeRecordService {
 
     @Resource
@@ -76,6 +80,9 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
     @Resource
     private NotificationEventPublisher notificationEventPublisher;
 
+    @Resource
+    private UserBehaviorEventDispatchService userBehaviorEventDispatchService;
+
 
     /**
      * 用户点赞
@@ -85,7 +92,8 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
     @Transactional(rollbackFor = Exception.class)
     public void clickLike(LikeRecordDTO likeRecordDTO) {
 
-        if(likeRecordDTO == null || likeRecordDTO.getTargetId() == null || likeRecordDTO.getUserId() == null){
+        Long currentUserId = UserContext.getUser().getId();
+        if(likeRecordDTO == null || likeRecordDTO.getTargetId() == null || currentUserId == null){
             throw  new BaseException(BusinessConstant.PARAM_ERROR);
         }
 
@@ -97,7 +105,7 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
             throw new BaseException(BusinessConstant.TARGETTYPE_ERROR);
         }
 
-        String userKey = RedisCacheConstant.LIKE_USER_PREFIX + likeRecordDTO.getUserId();
+        String userKey = RedisCacheConstant.LIKE_USER_PREFIX + currentUserId;
         String targetField = likeRecordDTO.getLikeTargetType()+ ':' + likeRecordDTO.getTargetId();
         String targetKey = RedisCacheConstant.LIKE_TARGET_PREFIX + targetField;
         String countKey = RedisCacheConstant.LIKE_COUNT_PREFIX + targetField;
@@ -106,23 +114,37 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
         if (Boolean.TRUE.equals(customStringRedisTemplate.opsForSet().isMember(userKey, targetField))) {
             // 已点过赞，则取消点赞
             customStringRedisTemplate.opsForSet().remove(userKey, targetField);
-            customStringRedisTemplate.opsForSet().remove(targetKey, String.valueOf(likeRecordDTO.getUserId()));
+            customStringRedisTemplate.opsForSet().remove(targetKey, String.valueOf(currentUserId));
             customStringRedisTemplate.opsForValue().decrement(countKey);
             isLikedNow = false;
         }
         else{
             // 未点赞，则点赞
             customStringRedisTemplate.opsForSet().add(userKey, targetField);
-            customStringRedisTemplate.opsForSet().add(targetKey, String.valueOf(likeRecordDTO.getUserId()));
+            customStringRedisTemplate.opsForSet().add(targetKey, String.valueOf(currentUserId));
             customStringRedisTemplate.opsForValue().increment(countKey);
             isLikedNow = true;
+        }
+
+        // 用户点赞书评行为记录
+        if (isLikedNow && "bookReview".equalsIgnoreCase(likeRecordDTO.getLikeTargetType())) {
+            UserBehaviorEvent behaviorEvent = UserBehaviorEvent.builder()
+                    .userId(currentUserId)
+                    .targetId(likeRecordDTO.getTargetId())
+                    .targetType("REVIEW")
+                    .behaviorType("REVIEW_LIKE")
+                    .behaviorScore(2.0)
+                    .occurredAt(LocalDateTime.now())
+                    .build();
+
+            userBehaviorEventDispatchService.publish(behaviorEvent);
         }
 
         // 操作数据库（后期通过MQ异步执行）
         LikeRecord likeRecord = LikeRecord.builder()
                 .targetId(likeRecordDTO.getTargetId())
                 .targetType(likeRecordDTO.getLikeTargetType())
-                .userId(likeRecordDTO.getUserId())
+                .userId(currentUserId)
                 .createTime(LocalDateTime.now())
                 .build();
 
@@ -143,18 +165,18 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
 
     }
 
-
     /**
      * 查询点赞状态
      * @param likeRecordDTO
      */
     @Override
     public boolean getLikeStatus(LikeRecordDTO likeRecordDTO) {
-        if(likeRecordDTO == null || likeRecordDTO.getTargetId() == null || likeRecordDTO.getUserId() == null){
+        Long currentUserId = UserContext.getUser().getId();
+        if(likeRecordDTO == null || likeRecordDTO.getTargetId() == null || currentUserId == null){
             throw new BaseException(BusinessConstant.PARAM_ERROR);
         }
         String targetField = likeRecordDTO.getLikeTargetType()+ ':' + likeRecordDTO.getTargetId();
-        String userKey = RedisCacheConstant.LIKE_USER_PREFIX + likeRecordDTO.getUserId();
+        String userKey = RedisCacheConstant.LIKE_USER_PREFIX + currentUserId;
         return Boolean.TRUE.equals(customStringRedisTemplate.opsForSet().isMember(userKey, targetField));
     }
 

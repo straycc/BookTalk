@@ -2,8 +2,11 @@ package com.cc.booktalk.application.user.service.recommendation.impl;
 
 import com.cc.booktalk.common.constant.BusinessConstant;
 import com.cc.booktalk.common.constant.RedisCacheConstant;
-import com.cc.booktalk.entity.entity.recommendation.UserInterestTag;
-import com.cc.booktalk.entity.vo.PersonalizedRecVO;
+import com.cc.booktalk.domain.entity.recommendation.UserBehaviorLog;
+import com.cc.booktalk.domain.entity.recommendation.UserInterestTag;
+import com.cc.booktalk.domain.recommendation.HotBookRecDomain;
+import com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO;
+import com.cc.booktalk.infrastructure.persistence.user.mapper.book.BookUserMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserBehaviorLogMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserInterestTagMapper;
 import com.cc.booktalk.application.user.service.recommendation.RecommendationService;
@@ -12,6 +15,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,7 +36,14 @@ public class RecommendationServiceImpl implements RecommendationService {
     private UserBehaviorLogMapper userBehaviorLogMapper;
 
     @Resource
+    private BookUserMapper bookUserMapper;
+
+    @Resource(name = "customObjectRedisTemplate")
     private RedisTemplate<String, Object> redisTemplate;
+
+
+    @Resource
+    private HotBookRecDomain  hotBookRecDomain;
 
 
     /**
@@ -226,28 +237,121 @@ public class RecommendationServiceImpl implements RecommendationService {
     @Override
     public List<PersonalizedRecVO> getHotRecommendations(Integer limit) {
         try {
-            log.debug("获取热门推荐: limit={}", limit);
+            int finalLimit = limit != null && limit > 0 ? limit : DEFAULT_RECOMMENDATION_COUNT;
+            log.debug("获取热门推荐: limit={}", finalLimit);
 
             // 尝试从缓存获取
             List<PersonalizedRecVO> cachedResults = (List<PersonalizedRecVO>) redisTemplate.opsForValue().get(RedisCacheConstant.RECOMMENDATIONS_HOT);
-            if (cachedResults != null) {
+            if (cachedResults != null && !cachedResults.isEmpty()) {
                 log.debug("从缓存获取热门推荐: 数量={}", cachedResults.size());
-                return cachedResults.stream().limit(limit).collect(Collectors.toList());
+                return cachedResults.stream().limit(finalLimit).collect(Collectors.toList());
             }
 
-            // 从数据库获取热门书籍
-            List<PersonalizedRecVO> hotBooks = userBehaviorLogMapper.getHotBooks(limit);
-
-            // 缓存结果
-            redisTemplate.opsForValue().set(RedisCacheConstant.RECOMMENDATIONS_HOT, hotBooks, Duration.ofHours(1));
-
-            log.debug("热门推荐计算完成: 数量={}", hotBooks.size());
-            return hotBooks;
+            // 缓存未命中时兜底计算一次，并回填缓存
+            return refreshHotRecommendationsCache(finalLimit);
 
         } catch (Exception e) {
             log.error("获取热门推荐失败", e);
             return new ArrayList<>();
         }
+    }
+
+    /**
+     * 刷新书籍热门缓存
+     * @param limit 缓存的推荐数量
+     * @return
+     */
+    @Override
+    public List<PersonalizedRecVO> refreshHotRecommendationsCache(Integer limit) {
+        try {
+            int finalLimit = limit != null && limit > 0 ? limit : 50;
+            List<PersonalizedRecVO> hotBooks = calculateHotRecommendations(finalLimit);
+            cacheHotRecommendationsIfNotEmpty(hotBooks);
+            log.info("热门推荐缓存刷新完成: 数量={}", hotBooks.size());
+            return hotBooks;
+        } catch (Exception e) {
+            log.error("刷新热门推荐缓存失败", e);
+            return new ArrayList<>();
+        }
+    }
+
+
+    /**
+     * 计算书籍热度值
+     * @param finalLimit
+     * @return
+     */
+    private List<PersonalizedRecVO> calculateHotRecommendations(int finalLimit) {
+        // 1.先按行为活跃度拿候选集合（扩大候选池，便于后续按衰减重排）
+        int candidateLimit = Math.max(finalLimit * 5, 50);
+        List<Long> candidateBookIds = userBehaviorLogMapper.getHotBookCandidateIds(30, candidateLimit);
+        if (candidateBookIds == null || candidateBookIds.isEmpty()) {
+            return buildFallbackHotBooks(finalLimit, now());
+        }
+
+        // 2. 批量拿图书基础信息
+        List<PersonalizedRecVO> candidateBooks = bookUserMapper.getRecBookBaseByIds(candidateBookIds);
+        Map<Long, PersonalizedRecVO> bookInfoMap = candidateBooks.stream()
+                .collect(Collectors.toMap(PersonalizedRecVO::getBookId, it -> it, (a, b) -> a, LinkedHashMap::new));
+
+        // 3. 使用Domain规则计算带时间衰减的热度分数
+        LocalDateTime now = LocalDateTime.now();
+        List<PersonalizedRecVO> rankedBooks = new ArrayList<>();
+        for (Long bookId : candidateBookIds) {
+            PersonalizedRecVO base = bookInfoMap.get(bookId);
+            if (base == null) {
+                continue;
+            }
+            List<UserBehaviorLog> behaviors = userBehaviorLogMapper.getBookRecentBehaviors(bookId, 30);
+            if (behaviors == null || !hotBookRecDomain.enoughActions(behaviors.size())) {
+                continue;
+            }
+            double score = hotBookRecDomain.calculateHotScore(behaviors, now);
+            base.setScore(score);
+            base.setReason("近期热度上升");
+            base.setAlgorithmType("POPULAR");
+            base.setRecommendTime(now);
+            rankedBooks.add(base);
+        }
+
+        rankedBooks.sort((a, b) -> Double.compare(
+                b.getScore() == null ? 0.0 : b.getScore(),
+                a.getScore() == null ? 0.0 : a.getScore()
+        ));
+        List<PersonalizedRecVO> hotBooks = rankedBooks.stream()
+                .limit(finalLimit)
+                .collect(Collectors.toList());
+
+        if (hotBooks.isEmpty()) {
+            hotBooks = buildFallbackHotBooks(finalLimit, now());
+        }
+        return hotBooks;
+    }
+
+
+    //当前时间
+    private LocalDateTime now() {
+        return LocalDateTime.now();
+    }
+
+    //热门书籍推荐兜底策略
+    private List<PersonalizedRecVO> buildFallbackHotBooks(int limit, LocalDateTime now) {
+        List<PersonalizedRecVO> fallback = bookUserMapper.getFallbackHotBooks(limit);
+        if (fallback == null || fallback.isEmpty()) {
+            return new ArrayList<>();
+        }
+        for (PersonalizedRecVO item : fallback) {
+            item.setAlgorithmType("POPULAR");
+            item.setRecommendTime(now);
+        }
+        return fallback;
+    }
+
+    private void cacheHotRecommendationsIfNotEmpty(List<PersonalizedRecVO> hotBooks) {
+        if (hotBooks == null || hotBooks.isEmpty()) {
+            return;
+        }
+        redisTemplate.opsForValue().set(RedisCacheConstant.RECOMMENDATIONS_HOT, hotBooks, Duration.ofHours(1));
     }
 
     /**

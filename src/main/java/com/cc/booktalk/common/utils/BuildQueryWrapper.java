@@ -4,8 +4,8 @@ package com.cc.booktalk.common.utils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
-import com.cc.booktalk.entity.dto.book.BookPageDTO;
-import com.cc.booktalk.entity.entity.book.Book;
+import com.cc.booktalk.interfaces.dto.user.book.BookPageDTO;
+import com.cc.booktalk.domain.entity.book.Book;
 
 
 public class BuildQueryWrapper {

@@ -1,11 +1,11 @@
 package com.cc.booktalk.application.user.service.like;
 
-import com.cc.booktalk.entity.result.PageResult;
-import com.cc.booktalk.entity.dto.like.LikePageDTO;
-import com.cc.booktalk.entity.dto.like.LikeRecordDTO;
-import com.cc.booktalk.entity.entity.like.LikeRecord;
+import com.cc.booktalk.common.result.PageResult;
+import com.cc.booktalk.interfaces.dto.user.like.LikePageDTO;
+import com.cc.booktalk.interfaces.dto.user.like.LikeRecordDTO;
+import com.cc.booktalk.domain.entity.like.LikeRecord;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.cc.booktalk.entity.vo.LikeRecordVO;
+import com.cc.booktalk.interfaces.vo.user.like.LikeRecordVO;
 
 /**
  * <p>

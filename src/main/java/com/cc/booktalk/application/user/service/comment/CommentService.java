@@ -1,11 +1,11 @@
 package com.cc.booktalk.application.user.service.comment;
 
-import com.cc.booktalk.entity.dto.comment.CommentDTO;
-import com.cc.booktalk.entity.result.PageResult;
-import com.cc.booktalk.entity.dto.comment.CommentPageDTO;
-import com.cc.booktalk.entity.entity.comment.Comment;
+import com.cc.booktalk.interfaces.dto.user.comment.CommentDTO;
+import com.cc.booktalk.common.result.PageResult;
+import com.cc.booktalk.interfaces.dto.user.comment.CommentPageDTO;
+import com.cc.booktalk.domain.entity.comment.Comment;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.cc.booktalk.entity.vo.CommentVO;
+import com.cc.booktalk.interfaces.vo.user.comment.CommentVO;
 
 import java.util.List;
 
@@ -22,10 +22,10 @@ public interface CommentService extends IService<Comment> {
 
     /**
      * 发布评论
-     * @param targetId
+     * @param rootId
      * @param commentDTO
      */
-    void commentPublish(Long targetId, CommentDTO commentDTO);
+    void commentPublish(Long rootId, CommentDTO commentDTO);
 
 
     /**

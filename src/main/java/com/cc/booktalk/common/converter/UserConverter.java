@@ -1,10 +1,10 @@
 package com.cc.booktalk.common.converter;
 
-import com.cc.booktalk.entity.dto.user.UserDTO;
-import com.cc.booktalk.entity.entity.user.User;
-import com.cc.booktalk.entity.entity.user.UserInfo;
-import com.cc.booktalk.entity.vo.user.UserLoginVO;
-import com.cc.booktalk.entity.vo.user.UserVO;
+import com.cc.booktalk.interfaces.dto.user.UserDTO;
+import com.cc.booktalk.domain.entity.user.User;
+import com.cc.booktalk.domain.entity.user.UserInfo;
+import com.cc.booktalk.interfaces.vo.user.user.UserLoginVO;
+import com.cc.booktalk.interfaces.vo.user.user.UserVO;
 import org.springframework.beans.BeanUtils;
 
 

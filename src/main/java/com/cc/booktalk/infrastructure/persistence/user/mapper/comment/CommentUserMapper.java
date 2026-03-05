@@ -1,6 +1,6 @@
 package com.cc.booktalk.infrastructure.persistence.user.mapper.comment;
 
-import com.cc.booktalk.entity.entity.comment.Comment;
+import com.cc.booktalk.domain.entity.comment.Comment;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**

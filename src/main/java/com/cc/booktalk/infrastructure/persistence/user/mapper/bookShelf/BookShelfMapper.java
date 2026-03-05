@@ -1,6 +1,6 @@
 package com.cc.booktalk.infrastructure.persistence.user.mapper.bookShelf;
 
-import com.cc.booktalk.entity.entity.bookShelf.BookShelf;
+import com.cc.booktalk.domain.entity.bookShelf.BookShelf;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**

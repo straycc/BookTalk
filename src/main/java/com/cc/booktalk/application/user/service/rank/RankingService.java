@@ -1,10 +1,10 @@
 package com.cc.booktalk.application.user.service.rank;
 
-import com.cc.booktalk.entity.dto.ranking.RankingQueryDTO;
-import com.cc.booktalk.entity.result.PageResult;
-import com.cc.booktalk.entity.vo.BookRankingVO;
-import com.cc.booktalk.entity.vo.HotReviewVO;
-import com.cc.booktalk.entity.vo.PersonalizedRecVO;
+import com.cc.booktalk.interfaces.dto.user.ranking.RankingQueryDTO;
+import com.cc.booktalk.common.result.PageResult;
+import com.cc.booktalk.interfaces.vo.user.ranking.BookRankingVO;
+import com.cc.booktalk.interfaces.vo.user.review.HotReviewVO;
+import com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO;
 
 import java.util.List;
 

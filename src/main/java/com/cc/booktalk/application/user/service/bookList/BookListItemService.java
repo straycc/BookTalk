@@ -1,6 +1,6 @@
 package com.cc.booktalk.application.user.service.bookList;
 
-import com.cc.booktalk.entity.entity.bookList.BookListItem;
+import com.cc.booktalk.domain.entity.bookList.BookListItem;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**

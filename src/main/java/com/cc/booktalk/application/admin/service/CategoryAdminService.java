@@ -1,10 +1,10 @@
 package com.cc.booktalk.application.admin.service;
 
-import com.cc.booktalk.entity.result.CategoryUpResult;
-import com.cc.booktalk.entity.result.PageResult;
-import com.cc.booktalk.entity.dto.category.CategoryDTO;
-import com.cc.booktalk.entity.dto.category.CategoryPageDTO;
-import com.cc.booktalk.entity.entity.category.Category;
+import com.cc.booktalk.common.result.CategoryUpResult;
+import com.cc.booktalk.common.result.PageResult;
+import com.cc.booktalk.interfaces.dto.user.category.CategoryDTO;
+import com.cc.booktalk.interfaces.dto.user.category.CategoryPageDTO;
+import com.cc.booktalk.domain.entity.category.Category;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.List;

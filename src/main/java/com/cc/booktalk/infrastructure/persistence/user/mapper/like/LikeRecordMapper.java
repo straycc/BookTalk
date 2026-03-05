@@ -1,6 +1,6 @@
 package com.cc.booktalk.infrastructure.persistence.user.mapper.like;
 
-import com.cc.booktalk.entity.entity.like.LikeRecord;
+import com.cc.booktalk.domain.entity.like.LikeRecord;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Param;
 

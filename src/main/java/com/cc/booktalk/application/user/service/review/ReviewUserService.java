@@ -1,11 +1,11 @@
 package com.cc.booktalk.application.user.service.review;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.cc.booktalk.entity.result.PageResult;
-import com.cc.booktalk.entity.dto.review.BookReviewDTO;
-import com.cc.booktalk.entity.dto.review.PageReviewDTO;
-import com.cc.booktalk.entity.entity.review.BookReview;
-import com.cc.booktalk.entity.vo.BookReviewVO;
+import com.cc.booktalk.common.result.PageResult;
+import com.cc.booktalk.interfaces.dto.user.review.BookReviewDTO;
+import com.cc.booktalk.interfaces.dto.user.review.PageReviewDTO;
+import com.cc.booktalk.domain.entity.review.BookReview;
+import com.cc.booktalk.interfaces.vo.user.review.BookReviewVO;
 
 /**
  * <p>

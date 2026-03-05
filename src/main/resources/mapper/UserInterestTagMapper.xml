@@ -5,7 +5,7 @@
 <mapper namespace="com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserInterestTagMapper">
 
     <!-- 结果映射 -->
-    <resultMap id="BaseResultMap" type="com.cc.booktalk.entity.entity.recommendation.UserInterestTag">
+    <resultMap id="BaseResultMap" type="com.cc.booktalk.domain.entity.recommendation.UserInterestTag">
         <id column="id" property="id" jdbcType="BIGINT"/>
         <result column="user_id" property="userId" jdbcType="BIGINT"/>
         <result column="tag_name" property="tagName" jdbcType="VARCHAR"/>
@@ -59,7 +59,7 @@
     </select>
 
     <!-- 更新用户兴趣标签（存在则更新，不存在则插入） -->
-    <insert id="upsertUserInterest" parameterType="com.cc.booktalk.entity.entity.recommendation.UserInterestTag">
+    <insert id="upsertUserInterest" parameterType="com.cc.booktalk.domain.entity.recommendation.UserInterestTag">
         INSERT INTO user_interest_tag (
             user_id, tag_name, interest_score,
             behavior_count, update_time, create_time
@@ -145,7 +145,7 @@
     </delete>
 
     <!-- 根据标签名获取推荐书籍 -->
-    <select id="getBooksByTagName" resultType="com.cc.booktalk.entity.vo.PersonalizedRecVO">
+    <select id="getBooksByTagName" resultType="com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO">
         SELECT
             b.id as bookId,
             b.title as bookTitle,

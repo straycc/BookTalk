@@ -1,9 +1,9 @@
 package com.cc.booktalk.application.user.service.notification;
 
 import com.cc.booktalk.common.event.NotificationEvent;
-import com.cc.booktalk.entity.dto.notification.NotificationQueryDTO;
-import com.cc.booktalk.entity.result.PageResult;
-import com.cc.booktalk.entity.vo.NotificationVO;
+import com.cc.booktalk.interfaces.dto.user.notification.NotificationQueryDTO;
+import com.cc.booktalk.common.result.PageResult;
+import com.cc.booktalk.interfaces.vo.user.notification.NotificationVO;
 
 /**
  * 通知服务接口
