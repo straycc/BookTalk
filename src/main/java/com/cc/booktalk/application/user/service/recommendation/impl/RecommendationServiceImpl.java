@@ -18,6 +18,7 @@ import com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.Use
 import com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserInterestTagMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.review.ReviewUserMapper;
 import com.cc.booktalk.application.user.service.recommendation.RecommendationService;
+import com.cc.booktalk.application.user.service.rank.BookRankingRefreshService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -27,6 +28,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.cc.booktalk.interfaces.vo.user.ranking.BookRankingVO;
 
 /**
  * 个性化推荐服务实现类
@@ -52,6 +54,9 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     @Resource
     private UserInfoUserMapper userInfoUserMapper;
+
+    @Resource
+    private BookRankingRefreshService bookRankingRefreshService;
 
     @Resource(name = "customObjectRedisTemplate")
     private RedisTemplate<String, Object> redisTemplate;
@@ -263,14 +268,19 @@ public class RecommendationServiceImpl implements RecommendationService {
             int finalLimit = limit != null && limit > 0 ? limit : DEFAULT_RECOMMENDATION_COUNT;
             log.debug("获取热门推荐: limit={}", finalLimit);
 
-            // 尝试从缓存获取
-            List<PersonalizedRecVO> cachedResults = (List<PersonalizedRecVO>) redisTemplate.opsForValue().get(RedisCacheConstant.RECOMMENDATIONS_HOT);
-            if (cachedResults != null && !cachedResults.isEmpty()) {
-                log.debug("从缓存获取热门推荐: 数量={}", cachedResults.size());
-                return cachedResults.stream().limit(finalLimit).collect(Collectors.toList());
+            List<PersonalizedRecVO> hotFromRank = getHotRecommendationsFromRankingCache();
+            if (!hotFromRank.isEmpty()) {
+                return hotFromRank.stream().limit(finalLimit).collect(Collectors.toList());
             }
 
-            // 缓存未命中时固定预热较大集合，避免被某次小limit请求“缩容”
+            // rank缓存缺失时触发重建，再读取一次
+            bookRankingRefreshService.refreshHotBooksRanking();
+            hotFromRank = getHotRecommendationsFromRankingCache();
+            if (!hotFromRank.isEmpty()) {
+                return hotFromRank.stream().limit(finalLimit).collect(Collectors.toList());
+            }
+
+            // 兜底：仍保留原推荐链路计算逻辑，避免接口空数据
             List<PersonalizedRecVO> refreshed = refreshHotRecommendationsCache(HOT_CACHE_PREWARM_COUNT);
             return refreshed.stream().limit(finalLimit).collect(Collectors.toList());
 
@@ -289,14 +299,111 @@ public class RecommendationServiceImpl implements RecommendationService {
     public List<PersonalizedRecVO> refreshHotRecommendationsCache(Integer limit) {
         try {
             int finalLimit = limit != null && limit > 0 ? limit : HOT_CACHE_PREWARM_COUNT;
+            // rec 热门推荐统一复用 rank 缓存
+            bookRankingRefreshService.refreshHotBooksRanking();
+            List<PersonalizedRecVO> hotFromRank = getHotRecommendationsFromRankingCache();
+            if (!hotFromRank.isEmpty()) {
+                log.info("热门推荐缓存刷新完成(来源rank): 数量={}", hotFromRank.size());
+                return hotFromRank.stream().limit(finalLimit).collect(Collectors.toList());
+            }
+
+            // 兜底：读取不到rank时，仍走原链路
             List<PersonalizedRecVO> hotBooks = calculateHotRecommendations(finalLimit);
             cacheHotRecommendationsIfNotEmpty(hotBooks);
-            log.info("热门推荐缓存刷新完成: 数量={}", hotBooks.size());
+            log.warn("热门推荐缓存刷新降级为rec本地计算: 数量={}", hotBooks.size());
             return hotBooks;
         } catch (Exception e) {
             log.error("刷新热门推荐缓存失败", e);
             return new ArrayList<>();
         }
+    }
+
+    private List<PersonalizedRecVO> getHotRecommendationsFromRankingCache() {
+        String rankKey = RedisCacheConstant.RANKING_HOT_BOOKS_PREFIX + "weekly";
+        Object cacheObj = redisTemplate.opsForValue().get(rankKey);
+        if (!(cacheObj instanceof List)) {
+            return List.of();
+        }
+        List<?> rawList = (List<?>) cacheObj;
+        if (rawList.isEmpty()) {
+            return List.of();
+        }
+
+        return rawList.stream()
+                .map(this::toRecFromRankingCacheItem)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    private PersonalizedRecVO toRecFromRankingCacheItem(Object item) {
+        if (item instanceof BookRankingVO) {
+            return toRecFromRanking((BookRankingVO) item);
+        }
+        if (!(item instanceof Map)) {
+            return null;
+        }
+        Map<?, ?> map = (Map<?, ?>) item;
+
+        Long bookId = toLong(map.get("bookId"));
+        if (bookId == null) {
+            return null;
+        }
+
+        PersonalizedRecVO rec = new PersonalizedRecVO();
+        rec.setBookId(bookId);
+        rec.setBookTitle(toStr(map.get("bookTitle")));
+        rec.setAuthor(toStr(map.get("author")));
+        rec.setBookCover(toStr(map.get("bookCover")));
+        rec.setScore(toDouble(map.get("hotScore")));
+        rec.setReason("热门榜单推荐");
+        rec.setAlgorithmType("POPULAR");
+        rec.setRecommendTime(LocalDateTime.now());
+        return rec;
+    }
+
+    private Long toLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
+    private Double toDouble(Object value) {
+        if (value == null) {
+            return 0D;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+        try {
+            return Double.parseDouble(String.valueOf(value));
+        } catch (Exception ignore) {
+            return 0D;
+        }
+    }
+
+    private String toStr(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private PersonalizedRecVO toRecFromRanking(BookRankingVO ranking) {
+        PersonalizedRecVO rec = new PersonalizedRecVO();
+        rec.setBookId(ranking.getBookId());
+        rec.setBookTitle(ranking.getBookTitle());
+        rec.setAuthor(ranking.getAuthor());
+        rec.setBookCover(ranking.getBookCover());
+        rec.setScore(ranking.getHotScore());
+        rec.setReason("热门榜单推荐");
+        rec.setAlgorithmType("POPULAR");
+        rec.setRecommendTime(LocalDateTime.now());
+        return rec;
     }
 
     /**

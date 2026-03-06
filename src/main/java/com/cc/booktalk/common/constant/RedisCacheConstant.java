@@ -28,15 +28,16 @@ public class RedisCacheConstant {
     public static final String LIKE_COUNT_PREFIX = "like:count:"; // 点赞计数缓存
 
     //榜单推荐相关
-    public static final String RANKING_HOT_REVIEWS = "ranking:hot_reviews"; // 热门书评榜单
-    public static final String RANKING_BOOKS = "ranking:books"; // 书籍榜单
+    public static final String RANKING_BOOKS = "ranking:books"; // 书籍榜单根节点
+    public static final String RANKING_REVIEWS = "ranking:reviews"; // 书评榜单根节点
+    public static final String RANKING_HOT_REVIEWS = "ranking:reviews:hot_reviews"; // 热门书评榜单
     public static final String RECOMMENDATIONS_PREFIX = "recommend:user:"; // 用户推荐
     public static final String RECOMMENDATIONS_HOT = "recommendation:hot_books"; // 热门推荐
     public static final String RECOMMENDATIONS_HOT_REVIEWS_PREFIX = "recommendation:hot_reviews:"; // 热门书评推荐
     public static final String USER_TOP_INTEREST_PREFIX = "user:top_interests:"; // 用户兴趣标签
 
-    public static final String RANKING_HOT_REVIEWS_PREFIX = "ranking:hot_reviews:" ; // 热门书评推荐
-    public static final String RANKING_HOT_BOOKS_PREFIX = "ranking:hot_books:" ; // 热门书评推荐
+    public static final String RANKING_HOT_REVIEWS_PREFIX = "ranking:reviews:hot_reviews:"; // 热门书评榜单前缀
+    public static final String RANKING_HOT_BOOKS_PREFIX = "ranking:books:hot_books:"; // 热门书籍榜单前缀
 
 
 }

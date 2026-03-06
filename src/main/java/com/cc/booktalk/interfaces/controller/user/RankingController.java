@@ -30,32 +30,10 @@ public class RankingController {
 
 
     /**
-     * 获取热门书评列表
-     */
-    @GetMapping("/hot-reviews")
-    @ApiOperation("获取热门书评列表")
-    public Result<List<HotReviewVO>> getHotReviews(RankingQueryDTO queryDTO) {
-        List<HotReviewVO> result = rankingService.getHotReviews(queryDTO);
-        return Result.success(result);
-    }
-
-    /**
-     * 获取热门书评Top N
-     */
-    @GetMapping("/hot-reviews/top")
-    @ApiOperation("获取热门书评Top N")
-    public Result<List<HotReviewVO>> getHotReviewsTopN(
-            @ApiParam(value = "时间周期", defaultValue = "weekly") @RequestParam(defaultValue = "weekly") String period,
-            @ApiParam(value = "数量限制", defaultValue = "10") @RequestParam(defaultValue = "10") Integer limit) {
-        List<HotReviewVO> result = rankingService.getHotReviewsTopN(period, limit);
-        return Result.success(result);
-    }
-
-    /**
-     * 获取书籍榜单
+     * 获取完整书籍榜单（分页）
      */
     @GetMapping("/books")
-    @ApiOperation("获取书籍榜单")
+    @ApiOperation("获取完整书籍榜单")
     public Result<PageResult<BookRankingVO>> getBookRankings(RankingQueryDTO queryDTO) {
         PageResult<BookRankingVO> result = rankingService.getBookRankings(queryDTO);
         return Result.success(result);
@@ -67,22 +45,22 @@ public class RankingController {
     @GetMapping("/books/top")
     @ApiOperation("获取书籍榜单Top N")
     public Result<List<BookRankingVO>> getBookRankingsTopN(
-            @ApiParam(value = "榜单类型", defaultValue = "book_rating") @RequestParam(defaultValue = "book_rating") String rankingType,
-            @ApiParam(value = "时间周期", defaultValue = "monthly") @RequestParam(defaultValue = "monthly") String period,
+            @ApiParam(value = "榜单类型", defaultValue = "hot_books") @RequestParam(defaultValue = "hot_books") String rankingType,
+            @ApiParam(value = "时间周期", defaultValue = "weekly") @RequestParam(defaultValue = "weekly") String period,
             @ApiParam(value = "数量限制", defaultValue = "10") @RequestParam(defaultValue = "10") Integer limit) {
         List<BookRankingVO> result = rankingService.getBookRankingTopN(rankingType, period, limit);
         return Result.success(result);
     }
 
     /**
-     * 获取相似书籍推荐
+     * 获取热门书评榜单Top N
      */
-    @GetMapping("/books/{bookId}/similar")
-    @ApiOperation("获取相似书籍推荐")
-    public Result<List<BookRankingVO>> getSimilarBooks(
-            @ApiParam("书籍ID") @PathVariable Long bookId,
-            @ApiParam(value = "推荐数量", defaultValue = "5") @RequestParam(defaultValue = "5") Integer limit) {
-        List<BookRankingVO> result = rankingService.getSimilarBooks(bookId, limit);
+    @GetMapping("/hot-reviews/top")
+    @ApiOperation("获取热门书评榜单Top N")
+    public Result<List<HotReviewVO>> getHotReviewRankingTopN(
+            @ApiParam(value = "时间周期", defaultValue = "weekly") @RequestParam(defaultValue = "weekly") String period,
+            @ApiParam(value = "数量限制", defaultValue = "10") @RequestParam(defaultValue = "10") Integer limit) {
+        List<HotReviewVO> result = rankingService.getHotReviewRankingTopN(period, limit);
         return Result.success(result);
     }
 }

@@ -4,7 +4,6 @@ import com.cc.booktalk.interfaces.dto.user.ranking.RankingQueryDTO;
 import com.cc.booktalk.common.result.PageResult;
 import com.cc.booktalk.interfaces.vo.user.ranking.BookRankingVO;
 import com.cc.booktalk.interfaces.vo.user.review.HotReviewVO;
-import com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO;
 
 import java.util.List;
 
@@ -18,18 +17,14 @@ import java.util.List;
 public interface RankingService {
 
     /**
-     * 获取热门书评列表
-     * @param queryDTO 查询参数
-     * @return 热门书评列表
-     */
-    List<HotReviewVO> getHotReviews(RankingQueryDTO queryDTO);
-
-    /**
-     * 获取热门书籍榜单
-     * @param queryDTO 查询参数
-     * @return 书籍榜单列表
+     * 获取书籍榜单分页（完整榜单）
      */
     PageResult<BookRankingVO> getBookRankings(RankingQueryDTO queryDTO);
+
+    /**
+     * 获取热门书评榜单Top N
+     */
+    List<HotReviewVO> getHotReviewRankingTopN(String period, Integer limit);
 
     /**
      * 获取指定书籍的相似推荐
@@ -39,13 +34,6 @@ public interface RankingService {
      */
     List<BookRankingVO> getSimilarBooks(Long bookId, Integer limit);
 
-    /**
-     * 获取热门书评Top N
-     * @param period 时间周期
-     * @param limit 数量限制
-     * @return 热门书评列表
-     */
-    List<HotReviewVO> getHotReviewsTopN(String period, Integer limit);
 
     /**
      * 获取热门书籍Top
@@ -55,24 +43,4 @@ public interface RankingService {
      * @return 书籍榜单列表
      */
     List<BookRankingVO> getBookRankingTopN(String rankingType, String period, Integer limit);
-
-    /**
-     * 获取热门书籍推荐（直接调用推荐系统）
-     * @param limit 数量限制
-     * @return 推荐书籍列表
-     */
-    List<PersonalizedRecVO> getHotBooks(Integer limit);
-
-    /**
-     * 更新热门书评榜单（保持原有逻辑）
-     * @param period 时间周期
-     */
-    void updateHotReviewsRanking(String period);
-
-    /**
-     * 更新书籍榜单（现在简化为缓存热门推荐）
-     * @param rankingType 榜单类型
-     * @param period 时间周期
-     */
-    void updateBookRanking(String rankingType, String period);
 }
