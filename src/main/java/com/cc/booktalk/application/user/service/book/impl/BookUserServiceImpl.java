@@ -5,10 +5,15 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.FunctionBoostMode;
+import co.elastic.clients.elasticsearch._types.query_dsl.FunctionScoreMode;
+import co.elastic.clients.elasticsearch._types.query_dsl.FieldValueFactorModifier;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
+import co.elastic.clients.util.ObjectBuilder;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cc.booktalk.common.constant.BusinessConstant;
@@ -92,22 +97,56 @@ public class BookUserServiceImpl extends ServiceImpl<BookUserMapper, Book> imple
     public PageResult<BookShowDTO> getSearchPage(PageSearchDTO pageSearchDTO) {
 
         CheckPageParam.checkPageDTO(pageSearchDTO);
-        String keyword = pageSearchDTO.getKeyword();
+        final String keyword = pageSearchDTO.getKeyword().trim();
+        if (StrUtil.isBlank(keyword)) {
+            throw new BaseException(BusinessConstant.PARAM_ERROR);
+        }
+
+
         int page = pageSearchDTO.getPageNum();
         int size = pageSearchDTO.getPageSize();
 
-        //1. 构建ES查询条件
-        SearchRequest searchRequest = SearchRequest.of(s->s
-                .index(ElasticsearchConstant.ES_BOOK_INDEX)
-                .from((page-1)*size)
-                .size(size)
-                .query(q->q
-                        .multiMatch(m->m
-                                .query(keyword)
-                                .fields("title","author","isbn")
-                        )
-                )//query
-        );
+        // 1. 构建ES查询条件：ISBN精确匹配；普通关键词使用文本相关性+业务热度混排
+        SearchRequest searchRequest;
+        if (isIsbnKeyword(keyword)) {
+            String normalizedIsbn = keyword.replace("-", "");
+            searchRequest = SearchRequest.of(s -> s
+                    .index(ElasticsearchConstant.ES_BOOK_INDEX)
+                    .from((page - 1) * size)
+                    .size(size)
+                    .query(q -> q.term(t -> t.field("isbn").value(normalizedIsbn)))
+            );
+        } else {
+            List<String> terms = splitSearchTerms(keyword);
+
+            searchRequest = SearchRequest.of(s -> s
+                    .index(ElasticsearchConstant.ES_BOOK_INDEX)
+                    .from((page - 1) * size)
+                    .size(size)
+                    .query(q -> q.functionScore(fs -> fs
+                            .query(iq -> buildKeywordQuery(iq, keyword, terms))
+                            .functions(f -> f.fieldValueFactor(fvf -> fvf
+                                    .field("hotScore")
+                                    .factor(0.01)
+                                    .missing(0.0)
+                            ))
+                            .functions(f -> f.fieldValueFactor(fvf -> fvf
+                                    .field("favoriteCount")
+                                    .modifier(FieldValueFactorModifier.Log1p)
+                                    .factor(0.05)
+                                    .missing(0.0)
+                            ))
+                            .functions(f -> f.fieldValueFactor(fvf -> fvf
+                                    .field("scoreCount")
+                                    .modifier(FieldValueFactorModifier.Log1p)
+                                    .factor(0.05)
+                                    .missing(0.0)
+                            ))
+                            .scoreMode(FunctionScoreMode.Sum)
+                            .boostMode(FunctionBoostMode.Sum)
+                    ))
+            );
+        }
         //2. 进行搜索
         try{
             SearchResponse<BookES> searchResponse = elasticsearchClient.search(searchRequest,BookES.class);
@@ -128,6 +167,61 @@ public class BookUserServiceImpl extends ServiceImpl<BookUserMapper, Book> imple
             log.error("ES搜索失败", e);
             throw new BaseException(BusinessConstant.BOOK_SEARCH_ERROR);
         }
+    }
+
+    /**
+     * 关键词匹配策略
+     * @param queryBuilder
+     * @param keyword
+     * @param terms
+     * @return
+     */
+    private ObjectBuilder<Query> buildKeywordQuery(
+            Query.Builder queryBuilder,
+            String keyword,
+            List<String> terms
+    ) {
+        if (terms.size() <= 1) {// 但单关键字，直接简单匹配
+            return queryBuilder.multiMatch(m -> m
+                    .query(keyword)
+                    .fields("title^4", "subTitle^2", "author^2")
+                    .minimumShouldMatch("1")//至少满足一个
+            );
+        }
+
+        return queryBuilder.bool(b -> {
+            for (String term : terms) {// 多关键字分别匹配，并通过 or 连接
+                b.should(sh -> sh.multiMatch(m -> m
+                        .query(term)
+                        .fields("title^4", "subTitle^2", "author^2")
+                        .minimumShouldMatch("1")
+                ));
+            }
+            b.should(sh -> sh.matchPhrase(mp -> mp.field("title").query(keyword).boost(4.0f)));
+            return b.minimumShouldMatch("1");
+        });
+    }
+
+    /**
+     * 按照常用的标点分割符分割关键字
+     * @param keyword
+     * @return
+     */
+    private List<String> splitSearchTerms(String keyword) {
+        return Arrays.stream(keyword.split("[\\s,，。；;、/|+]+"))
+                    .filter(StrUtil::isNotBlank)
+                    .collect(Collectors.toList());
+    }
+
+    /**
+     * 判断输入是否是ISBN（支持10/13位，允许中划线，10位末位可为X）
+     */
+    private boolean isIsbnKeyword(String keyword) {
+        if (StrUtil.isBlank(keyword)) {
+            return false;
+        }
+        String normalized = keyword.replace("-", "").trim();
+        return normalized.matches("^[0-9]{13}$") || normalized.matches("^[0-9]{9}[0-9Xx]$");
     }
 
 

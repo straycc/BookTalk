@@ -59,12 +59,23 @@ public class JwtUtil {
 
     //从 JWT 中提取用户信息，构造 UserDTO
     public static UserDTO parseUserDTO(JWT jwt) {
-        Long userId = Long.valueOf(jwt.getPayload("userId").toString());
-        String username = jwt.getPayload("username").toString();
-        int status = Integer.parseInt(jwt.getPayload("status").toString());
-        String role = jwt.getPayload("role").toString();
-        String avatar = jwt.getPayload("avatar").toString();
-        String nickName = jwt.getPayload("nickName").toString();
+        Object userIdObj = jwt.getPayload("userId");
+        Object usernameObj = jwt.getPayload("username");
+        Object statusObj = jwt.getPayload("status");
+        Object roleObj = jwt.getPayload("role");
+        Object avatarObj = jwt.getPayload("avatar");
+        Object nickNameObj = jwt.getPayload("nickName");
+
+        if (userIdObj == null || usernameObj == null || statusObj == null || roleObj == null) {
+            throw new BaseException("Invalid token");
+        }
+
+        Long userId = Long.valueOf(userIdObj.toString());
+        String username = usernameObj.toString();
+        int status = Integer.parseInt(statusObj.toString());
+        String role = roleObj.toString();
+        String avatar = avatarObj == null ? "" : avatarObj.toString();
+        String nickName = nickNameObj == null ? "" : nickNameObj.toString();
         if (status != 1) {
             throw new BaseException("账号已被禁用，请联系管理员");
         }

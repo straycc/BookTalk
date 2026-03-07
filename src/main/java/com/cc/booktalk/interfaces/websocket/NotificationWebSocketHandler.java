@@ -1,15 +1,21 @@
 package com.cc.booktalk.interfaces.websocket;
 
+import cn.hutool.jwt.JWT;
+import com.cc.booktalk.common.jwt.JwtUtil;
 import com.cc.booktalk.common.websocket.WebSocketMessage;
+import com.cc.booktalk.interfaces.dto.user.UserDTO;
 import com.cc.booktalk.interfaces.config.SpringEndpointConfigurator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import javax.websocket.*;
 import javax.annotation.Resource;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 通知WebSocket端点
@@ -18,6 +24,7 @@ import java.io.IOException;
  * @since 2025-10-12
  */
 @Slf4j
+@Component
 @ServerEndpoint(value = "/ws/notifications/{userId}", configurator = SpringEndpointConfigurator.class)
 public class NotificationWebSocketHandler {
 
@@ -35,7 +42,22 @@ public class NotificationWebSocketHandler {
         try {
             if (userId == null) {
                 log.warn("WebSocket连接缺少用户ID，关闭连接: sessionId={}", session.getId());
-                session.close();
+                closeWithReason(session, CloseReason.CloseCodes.CANNOT_ACCEPT, "missing userId");
+                return;
+            }
+
+            String token = extractToken(session);
+            if (token == null || token.isBlank()) {
+                log.warn("WebSocket连接缺少token，关闭连接: sessionId={}, userId={}", session.getId(), userId);
+                closeWithReason(session, CloseReason.CloseCodes.VIOLATED_POLICY, "missing token");
+                return;
+            }
+
+            UserDTO tokenUser = parseUserFromToken(token);
+            if (tokenUser == null || tokenUser.getId() == null || !userId.equals(tokenUser.getId())) {
+                log.warn("WebSocket token校验失败，关闭连接: sessionId={}, pathUserId={}, tokenUserId={}",
+                        session.getId(), userId, tokenUser == null ? null : tokenUser.getId());
+                closeWithReason(session, CloseReason.CloseCodes.VIOLATED_POLICY, "invalid token");
                 return;
             }
 
@@ -55,6 +77,43 @@ public class NotificationWebSocketHandler {
             } catch (IOException ioException) {
                 log.error("关闭WebSocket连接失败", ioException);
             }
+        }
+    }
+
+    private String extractToken(Session session) {
+        Map<String, List<String>> params = session.getRequestParameterMap();
+        if (params == null) {
+            return null;
+        }
+        List<String> tokenValues = params.get("token");
+        if (tokenValues == null || tokenValues.isEmpty()) {
+            return null;
+        }
+        String token = tokenValues.get(0);
+        if (token == null) {
+            return null;
+        }
+        if (token.startsWith("Bearer ")) {
+            return token.substring(7);
+        }
+        return token;
+    }
+
+    private UserDTO parseUserFromToken(String token) {
+        try {
+            JWT jwt = JwtUtil.verifyToken(token);
+            return JwtUtil.parseUserDTO(jwt);
+        } catch (Exception e) {
+            log.warn("WebSocket token解析失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private void closeWithReason(Session session, CloseReason.CloseCode code, String reason) {
+        try {
+            session.close(new CloseReason(code, reason));
+        } catch (IOException e) {
+            log.error("关闭WebSocket连接失败: sessionId={}", session.getId(), e);
         }
     }
 

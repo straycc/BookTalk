@@ -64,4 +64,14 @@ public class BookES {
      */
     private Integer scoreCount;
 
+    /**
+     * 收藏人数
+     */
+    private Integer favoriteCount;
+
+    /**
+     * 热度分
+     */
+    private Double hotScore;
+
 }

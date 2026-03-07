@@ -5,7 +5,7 @@
 
     <select id="getCategoryNames" parameterType="java.util.List" resultType="java.util.Map">
         select id,name
-        from book_category
+        from category
         where id in
         <foreach collection="categoryIds" item="id" open="(" separator="," close=")">
             #{id}

@@ -26,6 +26,18 @@ public class LoginInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        // WebSocket 握手请求放行（标准 Upgrade 头）
+        String upgrade = request.getHeader("Upgrade");
+        if (upgrade != null && "websocket".equalsIgnoreCase(upgrade)) {
+            return true;
+        }
+
+        // WebSocket 握手请求放行（路径中包含 /ws/）
+        String requestUri = request.getRequestURI();
+        if (requestUri != null && requestUri.contains("/ws/")) {
+            return true;
+        }
+
         // 1. 从请求头中获取 token
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {

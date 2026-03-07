@@ -18,7 +18,7 @@ public class BusinessConstant {
     public static final String BATCH_DELETE_ERROR = "批量删除失败" ;
 
     //用户角色相关
-    public static final String USER_ROLE_USER = "普通用户";
+    public static final String USER_ROLE_USER = "user";
     public static final String USER_ROLE_ADMIN = "管理员用户";
     public static final String USERNAME_REPEAT = "用户名重复";
 

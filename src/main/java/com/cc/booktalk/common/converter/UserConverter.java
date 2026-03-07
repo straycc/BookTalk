@@ -33,6 +33,8 @@ public class UserConverter {
             return userLoginVO;
         }
         BeanUtils.copyProperties(user, userLoginVO);
+        // BeanUtils 不会自动把 user.id 映射到 userId，需要显式设置
+        userLoginVO.setUserId(user.getId());
         // 如果userInfo不为null，设置昵称和头像
         if (userInfo != null) {
             userLoginVO.setNickname(userInfo.getNickname());
@@ -51,6 +53,8 @@ public class UserConverter {
             return userVO;
         }
         BeanUtils.copyProperties(user, userVO);
+        // BeanUtils 不会自动把 user.id 映射到 userId，需要显式设置
+        userVO.setUserId(user.getId());
         if (userInfo != null) {
             userVO.setNickname(userInfo.getNickname());
             userVO.setAvatarUrl(userInfo.getAvatarUrl());

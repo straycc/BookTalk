@@ -29,6 +29,8 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.Set;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -195,6 +197,17 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
         List<BookReview> reviewList = reviewUserMapper.selectList(wrapper);
         PageInfo<BookReview> pageInfo = new PageInfo<>(reviewList);
 
+        // 4.1 批量查用户信息，避免把昵称错误地写成当前登录用户
+        Set<Long> reviewUserIds = reviewList.stream()
+                .map(BookReview::getUserId)
+                .collect(Collectors.toSet());
+        Map<Long, UserInfo> userInfoMap = reviewUserIds.isEmpty()
+                ? Map.of()
+                : userInfoUserMapper.selectList(new LambdaQueryWrapper<UserInfo>()
+                        .in(UserInfo::getUserId, reviewUserIds))
+                .stream()
+                .collect(Collectors.toMap(UserInfo::getUserId, it -> it, (a, b) -> a));
+
         // 4. 转换 VO
         List<BookReviewVO> bookReviewVOList = reviewList.stream()
                 .map(review -> {
@@ -217,13 +230,12 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
                     Long commentCount = commentUserMapper.selectCount(commentWrapper);
                     vo.setCommentCount(commentCount.intValue());
 
-                    // 查用户信息
-                    vo.setNickName(UserContext.getUser().getNickname());
-//                    User user = userMapper.selectById(review.getUserId());
-//                    if (user != null) {
-//                        vo.setUsername(user.getUsername());
-//                        vo.setAvatar(user.getAvatar()); // 头像
-//                    }
+                    // 查用户信息（按书评作者 userId 回填）
+                    UserInfo userInfo = userInfoMap.get(review.getUserId());
+                    if (userInfo != null) {
+                        vo.setNickName(userInfo.getNickname());
+                        vo.setAvatarUrl(userInfo.getAvatarUrl());
+                    }
                     return vo;
                 })
                 .collect(Collectors.toList());

@@ -86,6 +86,9 @@ logging:
     org.springframework.amqp: info
     com.rabbitmq: warn
 
+    org.apache.tomcat.websocket: debug
+    javax.websocket: debug
+
 xxl:
   job:
     enabled: false

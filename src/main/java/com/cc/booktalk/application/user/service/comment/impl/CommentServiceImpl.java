@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -203,8 +204,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
         List<Comment> listComments = commentUserMapper.selectList(lambdaQueryWrapper);
 
         //从redis取出用户数据
-        String key = RedisCacheConstant.USER_INFO_KEY_PREFIX + UserContext.getUser().getId();
-        UserVO userInfo = (UserVO) customObjectRedisTemplate.opsForValue().get(key);
+        UserVO userInfo = loadUserVO(UserContext.getUser().getId());
         if (userInfo == null) {
             throw new BaseException("用户信息不存在或已过期");
         }
@@ -269,19 +269,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
                 .map(
                         comment ->{
                              CommentVO commentVO = ConvertUtils.convert(comment, CommentVO.class);
-                             String key = RedisCacheConstant.USER_INFO_KEY_PREFIX + commentVO.getUserId();
-                             UserVO userInfo = (UserVO) customObjectRedisTemplate.opsForValue().get(key);
-                             if (userInfo == null) {
-                                 UserInfo user = userInfoUserMapper.selectOne(
-                                         new LambdaQueryWrapper<UserInfo>().eq(UserInfo::getUserId, commentVO.getUserId())
-                                 );
-                                 if (user != null) {
-                                     userInfo = ConvertUtils.convert(user, UserVO.class);
-
-                                     //  缓存到 Redis，设置过期时间，比如 1 小时
-                                     customObjectRedisTemplate.opsForValue().set(key, userInfo, 60, TimeUnit.MINUTES);
-                                 }
-                             }
+                             UserVO userInfo = loadUserVO(commentVO.getUserId());
                             if (userInfo != null) {
                                 commentVO.setNickName(userInfo.getNickname());
                                 commentVO.setAvatar(userInfo.getAvatarUrl());
@@ -294,19 +282,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
         List<CommentVO> childCommentsVO = childComments.stream()
                 .map(comment -> {
                         CommentVO commentVO = ConvertUtils.convert(comment, CommentVO.class);
-                        String key = RedisCacheConstant.USER_INFO_KEY_PREFIX + commentVO.getUserId();
-                        UserVO userInfo = (UserVO) customObjectRedisTemplate.opsForValue().get(key);
-                        if (userInfo == null) {
-                            UserInfo user = userInfoUserMapper.selectOne(
-                                    new LambdaQueryWrapper<UserInfo>().eq(UserInfo::getUserId, commentVO.getUserId())
-                            );
-                            if (user != null) {
-                                userInfo = ConvertUtils.convert(user, UserVO.class);
-
-                                //  缓存到 Redis，设置过期时间，比如 1 小时
-                                customObjectRedisTemplate.opsForValue().set(key, userInfo, 60, TimeUnit.MINUTES);
-                            }
-                        }
+                        UserVO userInfo = loadUserVO(commentVO.getUserId());
                         if (userInfo != null) {
                             commentVO.setNickName(userInfo.getNickname());
                             commentVO.setAvatar(userInfo.getAvatarUrl());
@@ -338,6 +314,65 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
 
         // 返回一级评论列表（一级评论下挂载了子评论）
         return firstCommentsVO;
+    }
+
+    private UserVO loadUserVO(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        String key = RedisCacheConstant.USER_INFO_KEY_PREFIX + userId;
+        Object cached = customObjectRedisTemplate.opsForValue().get(key);
+        UserVO userVO = toUserVO(cached);
+        if (userVO != null) {
+            return userVO;
+        }
+
+        UserInfo user = userInfoUserMapper.selectOne(
+                new LambdaQueryWrapper<UserInfo>().eq(UserInfo::getUserId, userId)
+        );
+        if (user == null) {
+            return null;
+        }
+        userVO = ConvertUtils.convert(user, UserVO.class);
+        customObjectRedisTemplate.opsForValue().set(key, userVO, 60, TimeUnit.MINUTES);
+        return userVO;
+    }
+
+    @SuppressWarnings("unchecked")
+    private UserVO toUserVO(Object cached) {
+        if (cached == null) {
+            return null;
+        }
+        if (cached instanceof UserVO) {
+            return (UserVO) cached;
+        }
+        if (cached instanceof Map) {
+            Map<Object, Object> map = (Map<Object, Object>) cached;
+            UserVO userVO = new UserVO();
+            userVO.setUserId(toLong(map.get("userId")));
+            userVO.setNickname(toStringVal(map.get("nickname")));
+            userVO.setAvatarUrl(toStringVal(map.get("avatarUrl")));
+            return userVO;
+        }
+        return null;
+    }
+
+    private Long toLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
+    private String toStringVal(Object value) {
+        return Objects.toString(value, null);
     }
 
     /**

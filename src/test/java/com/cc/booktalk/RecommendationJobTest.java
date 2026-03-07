@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.NONE,
-        properties = "booktalk.websocket.enabled=false"
+        properties = "booktalk.websocket.enabled=true"
 )
 public class RecommendationJobTest {
 
