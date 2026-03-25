@@ -1,0 +1,3 @@
+[mcp_servers.mysql]
+url = "http://192.168.72.128:3306"
+tool_timeout_sec = 120
