@@ -2,6 +2,8 @@ package com.cc.booktalk.application.user.service.recommendation.profile.impl;
 
 import com.cc.booktalk.domain.entity.recommendation.UserInterestTag;
 import com.cc.booktalk.domain.enums.InterestType;
+import com.cc.booktalk.common.constant.BusinessConstant;
+import com.cc.booktalk.common.exception.BaseException;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserInterestTagMapper;
 import com.cc.booktalk.application.user.service.recommendation.profile.UserInterestService;
 import lombok.extern.slf4j.Slf4j;
@@ -36,11 +38,17 @@ public class UserInterestServiceImpl implements UserInterestService {
      */
     @Override
     public void calculateUserInterests(Long userId) {
+        if (userId == null || userId <= 0) {
+            throw new BaseException(BusinessConstant.PARAM_ERROR);
+        }
         try {
             log.debug("开始计算用户兴趣: userId={}", userId);
 
             // 获取用户最近的行为数据
             List<UserInterestTag> existingInterests = userInterestTagMapper.selectByUserId(userId);
+            if (existingInterests == null || existingInterests.isEmpty()) {
+                return;
+            }
 
             // 对每个兴趣标签应用时间衰减
             for (UserInterestTag interest : existingInterests) {
@@ -52,6 +60,7 @@ public class UserInterestServiceImpl implements UserInterestService {
 
         } catch (Exception e) {
             log.error("计算用户兴趣失败: userId={}", userId, e);
+            throw new BaseException("计算用户兴趣失败");
         }
     }
 
@@ -62,11 +71,15 @@ public class UserInterestServiceImpl implements UserInterestService {
      */
     @Override
     public List<UserInterestTag> getUserInterests(Long userId) {
+        if (userId == null || userId <= 0) {
+            throw new BaseException(BusinessConstant.PARAM_ERROR);
+        }
         try {
-            return userInterestTagMapper.selectByUserId(userId);
+            List<UserInterestTag> interests = userInterestTagMapper.selectByUserId(userId);
+            return interests == null ? List.of() : interests;
         } catch (Exception e) {
             log.error("获取用户兴趣失败: userId={}", userId, e);
-            return null;
+            throw new BaseException("获取用户兴趣失败");
         }
     }
 

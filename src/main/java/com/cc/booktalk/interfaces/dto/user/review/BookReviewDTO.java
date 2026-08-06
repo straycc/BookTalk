@@ -2,6 +2,7 @@ package com.cc.booktalk.interfaces.dto.user.review;
 
 import lombok.Data;
 
+import java.util.List;
 
 @Data
 public class BookReviewDTO {
@@ -50,5 +51,10 @@ public class BookReviewDTO {
      * 回复数
      */
     private Integer replyCount;
+
+    /**
+     * 内容标签ID列表
+     */
+    private List<Long> tagIds;
 
 }

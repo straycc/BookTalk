@@ -17,12 +17,12 @@ public class CommentVO {
     private Long id;
 
     /**
-     * 评论目标ID
+     * 评论根目标ID
      */
     private Long rootId;
 
     /**
-     * 评论目标类型: BOOK_REVIEW, COMMENT, BOOKLIST
+     * 评论目标类型: BOOK, REVIEW, COMMENT
      */
     private String  targetType;
 

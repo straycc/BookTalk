@@ -6,9 +6,10 @@
         SELECT b.*
         FROM book b
                  JOIN book_tag_relation b_tag ON b.id = b_tag.book_id
-                 LEFT JOIN book_rating r ON b.id = r.book_id
+                 JOIN book_review r ON b.id = r.book_id
         WHERE b_tag.tag_id = #{hotTagId}
           AND DATE_FORMAT(r.create_time, '%Y-%m') = #{month}
+          AND r.score IS NOT NULL
         GROUP BY b.id
         ORDER BY COUNT(r.id) DESC, AVG(r.score) DESC
         LIMIT #{limit}

@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * 用户行为服务实现类
@@ -31,21 +30,17 @@ public class UserBehaviorServiceImpl implements UserBehaviorService {
      */
     @Override
     public void recordUserBehavior(UserBehaviorEvent behaviorDTO) {
-        try {
-            // 转换DTO为实体
-            UserBehaviorLog behaviorLog = convertToEntity(behaviorDTO);
-
-            // 保存到数据库
-            userBehaviorLogMapper.insert(behaviorLog);
-
-            log.debug("用户行为记录成功: userId={}, behaviorType={}, targetId={}",
-                     behaviorDTO.getUserId(), behaviorDTO.getBehaviorType(), behaviorDTO.getTargetId());
-
-        } catch (Exception e) {
-            log.error("记录用户行为失败: userId={}, behaviorType={}",
-                     behaviorDTO.getUserId(), behaviorDTO.getBehaviorType(), e);
-            // 不抛出异常，避免影响主业务流程
+        if (behaviorDTO == null || behaviorDTO.getUserId() == null || behaviorDTO.getTargetId() == null
+                || behaviorDTO.getBehaviorType() == null || behaviorDTO.getBehaviorType().isBlank()) {
+            throw new IllegalArgumentException("用户行为事件不完整");
         }
+        if (behaviorDTO.getBehaviorScore() == null) {
+            behaviorDTO.setBehaviorScore(getDefaultBehaviorScore(behaviorDTO.getBehaviorType()));
+        }
+        UserBehaviorLog behaviorLog = convertToEntity(behaviorDTO);
+        userBehaviorLogMapper.insert(behaviorLog);
+        log.debug("用户行为记录成功: userId={}, behaviorType={}, targetId={}",
+                behaviorDTO.getUserId(), behaviorDTO.getBehaviorType(), behaviorDTO.getTargetId());
     }
 
     /**
@@ -98,25 +93,17 @@ public class UserBehaviorServiceImpl implements UserBehaviorService {
                 return 2.5;    // 一级评论书评 - 中等兴趣
             case "REVIEW_REPLY":
                 return 3.0;    // 回复评论 - 较强兴趣
+            case "POST_VIEW":
+                return 0.2;    // 浏览帖子 - 轻量互动
+            case "POST_LIKE":
+                return 2.0;    // 点赞帖子 - 中等兴趣
+            case "POST_COMMENT":
+                return 4.0;    // 评论帖子 - 高互动
+            case "POST_REPLY":
+                return 3.0;    // 回复帖子评论 - 较高互动
             default:
                 return 1.0;    // 默认基础兴趣
         }
     }
 
-    /**
-     * 获取活跃用户列表
-     *
-     * @param days 最近天数
-     * @param minActions 最小行为次数
-     * @return 活跃用户ID列表
-     */
-    @Override
-    public List<Long> getActiveUsers(int days, int minActions) {
-        try {
-            return userBehaviorLogMapper.getActiveUsers(days, minActions);
-        } catch (Exception e) {
-            log.error("获取活跃用户失败: days={}, minActions={}", days, minActions, e);
-            return List.of();
-        }
-    }
 }

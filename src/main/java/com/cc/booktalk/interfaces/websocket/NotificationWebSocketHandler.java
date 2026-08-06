@@ -34,6 +34,9 @@ public class NotificationWebSocketHandler {
     @Resource
     private WebSocketSessionManager sessionManager;
 
+    @Resource
+    private JwtUtil jwtUtil;
+
     /**
      * 连接建立时调用
      */
@@ -101,8 +104,8 @@ public class NotificationWebSocketHandler {
 
     private UserDTO parseUserFromToken(String token) {
         try {
-            JWT jwt = JwtUtil.verifyToken(token);
-            return JwtUtil.parseUserDTO(jwt);
+            JWT jwt = jwtUtil.verifyToken(token);
+            return jwtUtil.parseUserDTO(jwt);
         } catch (Exception e) {
             log.warn("WebSocket token解析失败: {}", e.getMessage());
             return null;
@@ -156,7 +159,12 @@ public class NotificationWebSocketHandler {
      */
     @OnError
     public void onError(Session session, Throwable error, @PathParam("userId") Long userId) {
-        log.error("WebSocket连接错误: userId={}, sessionId={}", userId, session.getId(), error);
+        if (isClientDisconnect(error)) {
+            log.info("WebSocket客户端已断开: userId={}, sessionId={}, message={}",
+                    userId, session.getId(), extractErrorMessage(error));
+        } else {
+            log.error("WebSocket连接错误: userId={}, sessionId={}", userId, session.getId(), error);
+        }
 
         // 从会话管理器中移除
         if (userId != null) {
@@ -178,7 +186,48 @@ public class NotificationWebSocketHandler {
                         session.getId(), jsonMessage);
             }
         } catch (IOException e) {
+            if (isClientDisconnect(e)) {
+                log.info("发送WebSocket消息时客户端已断开: sessionId={}, message={}",
+                        session.getId(), extractErrorMessage(e));
+                return;
+            }
             log.error("发送WebSocket消息失败: sessionId={}", session.getId(), e);
         }
+    }
+
+    /**
+     * 判断是否为客户端主动断开连接导致的异常，避免把正常断连打成错误日志。
+     */
+    private boolean isClientDisconnect(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof IOException) {
+                String message = current.getMessage();
+                if (message != null) {
+                    String lowerMessage = message.toLowerCase();
+                    if (message.contains("软件中止了一个已建立的连接")
+                            || message.contains("远程主机强迫关闭了一个现有的连接")
+                            || lowerMessage.contains("broken pipe")
+                            || lowerMessage.contains("connection reset")
+                            || lowerMessage.contains("forcibly closed")
+                            || lowerMessage.contains("connection aborted")) {
+                        return true;
+                    }
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private String extractErrorMessage(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current.getMessage() != null && !current.getMessage().isBlank()) {
+                return current.getMessage();
+            }
+            current = current.getCause();
+        }
+        return "unknown";
     }
 }

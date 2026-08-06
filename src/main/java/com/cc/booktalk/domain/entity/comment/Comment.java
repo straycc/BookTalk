@@ -11,6 +11,8 @@ import com.cc.booktalk.domain.enums.TargetType;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import lombok.experimental.Accessors;
 
 /**
@@ -26,6 +28,8 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 @TableName("comment")
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Comment implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -36,7 +40,7 @@ public class Comment implements Serializable {
     /**
      * 评论目标ID
      */
-    @TableField("target_id")
+    @TableField("root_id")
     private Long rootId;
 
     /**

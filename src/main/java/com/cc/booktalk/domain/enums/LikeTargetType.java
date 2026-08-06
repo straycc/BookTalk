@@ -8,9 +8,9 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum LikeTargetType {
 
-    BOOK_REVIEW( "bookReview"),
-    COMMENT("comment"),
-    BOOKLIST("bookList");
+    BOOK_REVIEW("REVIEW"),
+    POST("POST"),
+    COMMENT("COMMENT");
 
     @EnumValue
     private final String code;

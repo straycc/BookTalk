@@ -1,8 +1,9 @@
 package com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation;
 
+import com.cc.booktalk.domain.enums.InterestType;
+import com.cc.booktalk.domain.recommendation.model.RecommendationBookCandidate;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.cc.booktalk.domain.entity.recommendation.UserInterestTag;
-import com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -34,13 +35,16 @@ public interface UserInterestTagMapper extends BaseMapper<UserInterestTag> {
     List<UserInterestTag> selectByUserId(@Param("userId") Long userId);
 
     /**
-     * 根据用户ID和标签名查询兴趣标签
+     * 根据用户ID和兴趣类型/兴趣键查询兴趣标签
      *
      * @param userId 用户ID
-     * @param tagName 标签名称
+     * @param interestType 兴趣类型
+     * @param interestKey 兴趣键
      * @return 兴趣标签
      */
-    UserInterestTag selectByUserAndTag(@Param("userId") Long userId, @Param("tagName") String tagName);
+    UserInterestTag selectByUserAndInterest(@Param("userId") Long userId,
+                                            @Param("interestType") InterestType interestType,
+                                            @Param("interestKey") String interestKey);
 
     /**
      * 根据标签名获取推荐书籍
@@ -49,8 +53,8 @@ public interface UserInterestTagMapper extends BaseMapper<UserInterestTag> {
      * @param limit 推荐数量限制
      * @return 推荐书籍列表
      */
-    List<PersonalizedRecVO> getBooksByTagName(@Param("tagName") String tagName,
-                                              @Param("limit") Integer limit);
+    List<RecommendationBookCandidate> getBooksByTagName(@Param("tagName") String tagName,
+                                                        @Param("limit") Integer limit);
 
 
     /**
@@ -62,6 +66,18 @@ public interface UserInterestTagMapper extends BaseMapper<UserInterestTag> {
      */
     List<UserInterestTag> getTopUserInterests(@Param("userId") Long userId,
                                              @Param("limit") Integer limit);
+
+    /**
+     * 获取指定类型兴趣分数最高的画像
+     *
+     * @param userId 用户ID
+     * @param interestType 兴趣类型
+     * @param limit 限制数量
+     * @return 兴趣画像列表
+     */
+    List<UserInterestTag> getTopUserInterestsByType(@Param("userId") Long userId,
+                                                    @Param("interestType") InterestType interestType,
+                                                    @Param("limit") Integer limit);
 
     /**
      * 更新用户兴趣标签

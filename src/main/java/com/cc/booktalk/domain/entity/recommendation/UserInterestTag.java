@@ -1,16 +1,16 @@
 package com.cc.booktalk.domain.entity.recommendation;
 
-import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.*;
-import java.time.LocalDateTime;
+
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 /**
- * 用户兴趣标签实体类
- * 用于存储用户对不同标签的兴趣分数
- * 是推荐算法计算的核心数据
+ * 用户兴趣画像实体类
+ * 用于存储用户对标签、分类、作者等不同维度的兴趣分数
  *
  * @author cc
  * @since 2024-01-15
@@ -36,30 +36,29 @@ public class UserInterestTag implements Serializable {
     private Long userId;
 
     /**
-     * 标签名称
-     * 例如：Java、编程、小说、历史、科幻、技术等
+     * 兴趣类型
+     * 取值：TAG / CATEGORY / AUTHOR
      */
-    private String tagName;
+    private String interestType;
+
+    /**
+     * 兴趣键
+     * TAG 类型保存标签名称，CATEGORY 类型保存分类ID，AUTHOR 类型保存作者名
+     */
+    private String interestKey;
 
     /**
      * 兴趣分数
-     * 基于用户行为计算得出的兴趣强度
-     * 分数越高表示兴趣越强烈
-     * 分数会根据用户行为和时间衰减动态更新
      */
     private Double interestScore;
 
     /**
      * 行为次数
-     * 该兴趣标签相关的用户行为总次数
-     * 用于兴趣分数计算和权重调整
      */
     private Integer behaviorCount;
 
     /**
      * 最后更新时间
-     * 兴趣分数最后更新的时间
-     * 用于时间衰减计算和数据新鲜度判断
      */
     private LocalDateTime updateTime;
 

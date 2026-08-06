@@ -2,6 +2,7 @@ package com.cc.booktalk.application.user.service.user;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.cc.booktalk.interfaces.dto.user.UserLoginDTO;
+import com.cc.booktalk.interfaces.dto.user.UserPasswordChangeDTO;
 import com.cc.booktalk.interfaces.dto.user.UserProfileDTO;
 import com.cc.booktalk.interfaces.dto.user.UserRegisterDTO;
 import com.cc.booktalk.domain.entity.user.User;
@@ -49,6 +50,8 @@ public interface UserService extends IService<User> {
      * @param userProfileDTO
      */
     void reviseProfile(UserProfileDTO userProfileDTO);
+
+    void changePassword(UserPasswordChangeDTO passwordChangeDTO);
 
 
     /**

@@ -63,8 +63,12 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOriginPatterns("http://localhost:5173") // 允许前端访问地址（不要用 *，否则不能配合 allowCredentials）
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedOriginPatterns(
+                        "http://localhost:[*]",
+                        "http://127.0.0.1:[*]",
+                        "http://[::1]:[*]"
+                ) // 允许本地开发环境的不同 Origin 访问（不要用 *，否则不能配合 allowCredentials）
+                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true) // 允许携带 Cookie/Token
                 .maxAge(3600);

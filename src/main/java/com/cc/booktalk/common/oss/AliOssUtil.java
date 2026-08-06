@@ -31,6 +31,10 @@ public class AliOssUtil {
      */
     public String upload(byte[] bytes, String objectName) {
 
+        if (!isConfigured()) {
+            throw new IllegalStateException("文件存储未配置，请设置 ALIYUN OSS 环境变量");
+        }
+
         // 创建OSSClient实例。
         OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
 
@@ -52,5 +56,12 @@ public class AliOssUtil {
         String url = String.format("https://%s.%s/%s", bucketName, endpoint, objectName);
         log.info("文件上传到: {}", url);
         return url;
+    }
+
+    public boolean isConfigured() {
+        return endpoint != null && !endpoint.isBlank()
+                && accessKeyId != null && !accessKeyId.isBlank()
+                && accessKeySecret != null && !accessKeySecret.isBlank()
+                && bucketName != null && !bucketName.isBlank();
     }
 }

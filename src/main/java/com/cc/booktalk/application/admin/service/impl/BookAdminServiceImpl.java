@@ -99,6 +99,8 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
         //3.写入mysql
         Book book = new Book();
         BeanUtils.copyProperties(bookDTO,book);
+        book.setCreateTime(LocalDateTime.now());
+        book.setUpdateTime(LocalDateTime.now());
         bookAdminMapper.insert(book);
 
 
@@ -117,8 +119,7 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
             log.info("ES写入成功，索引={}，ID={}", response.index(), response.id());
 
         } catch (IOException e) {
-            log.error("ES写入失败，ID={}，错误信息={}", bookES.getId(), e.getMessage(), e);
-            throw new BaseException("写入搜索引擎失败");
+            log.warn("图书已写入 MySQL，但同步 Elasticsearch 失败，ID={}，原因={}", bookES.getId(), e.getMessage());
         }
 
     }
@@ -209,8 +210,7 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
                 }
 
             } catch (IOException e) {
-                log.error("批量写入 Elasticsearch 异常", e);
-                throw new BaseException(ElasticsearchConstant.ES_WRITE_ERROR);
+                log.warn("图书已批量写入 MySQL，但同步 Elasticsearch 失败: {}", e.getMessage());
             }
         }
         //4. 返回数据构造
@@ -314,8 +314,7 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
             log.info("ES更新成功，索引={}，ID={}", response.index(), response.id());
 
         } catch (IOException e) {
-            log.error("ES写入失败", e);
-            throw new BaseException(ElasticsearchConstant.ES_WRITE_ERROR);
+            log.warn("图书已更新到 MySQL，但同步 Elasticsearch 失败，ID={}，原因={}", id, e.getMessage());
         }
 
     }
@@ -357,8 +356,7 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
             }
 
         } catch (Exception e) {
-            log.error("ES删除失败", e);
-            throw new BaseException(BusinessConstant.BOOK_DELETE_ES_ERROR);
+            log.warn("图书已从 MySQL 删除，但同步删除 Elasticsearch 失败，ID={}，原因={}", id, e.getMessage());
         }
 
     }
@@ -416,14 +414,13 @@ public class BookAdminServiceImpl extends ServiceImpl<BookAdminMapper, Book> imp
                         .filter(item -> item.error() != null)
                         .forEach(item -> log.error("失败ID: {}, 原因: {}", item.id(), item.error().reason()));
 
-                throw new BaseException(BusinessConstant.BOOK_DELETE_ES_ERROR);
+                log.warn("部分 Elasticsearch 文档删除失败，后续需要重建索引修复");
             } else {
                 log.info("成功删除 {} 条数据（ES）", ids.size());
             }
 
         } catch (Exception e) {
-            log.error("ES 批量删除失败", e);
-            throw new BaseException(BusinessConstant.BOOK_DELETE_ES_ERROR);
+            log.warn("图书已从 MySQL 批量删除，但同步删除 Elasticsearch 失败: {}", e.getMessage());
         }
 
     }

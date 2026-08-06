@@ -97,7 +97,7 @@ public class BookUserServiceImpl extends ServiceImpl<BookUserMapper, Book> imple
     public PageResult<BookShowDTO> getSearchPage(PageSearchDTO pageSearchDTO) {
 
         CheckPageParam.checkPageDTO(pageSearchDTO);
-        final String keyword = pageSearchDTO.getKeyword().trim();
+        final String keyword = pageSearchDTO.getKeyword() == null ? "" : pageSearchDTO.getKeyword().trim();
         if (StrUtil.isBlank(keyword)) {
             throw new BaseException(BusinessConstant.PARAM_ERROR);
         }
@@ -164,9 +164,27 @@ public class BookUserServiceImpl extends ServiceImpl<BookUserMapper, Book> imple
             return new PageResult<BookShowDTO>(total,bookShowList);
         }
         catch(Exception e){
-            log.error("ES搜索失败", e);
-            throw new BaseException(BusinessConstant.BOOK_SEARCH_ERROR);
+            log.warn("Elasticsearch 搜索不可用，回退到 MySQL: {}", e.getMessage());
+            return searchFromDatabase(keyword, page, size);
         }
+    }
+
+    private PageResult<BookShowDTO> searchFromDatabase(String keyword, int page, int size) {
+        LambdaQueryWrapper<Book> wrapper = new LambdaQueryWrapper<>();
+        String normalizedIsbn = keyword.replace("-", "");
+        wrapper.and(query -> query
+                .like(Book::getTitle, keyword)
+                .or().like(Book::getAuthor, keyword)
+                .or().eq(Book::getIsbn, normalizedIsbn))
+                .orderByDesc(Book::getHotScore)
+                .orderByDesc(Book::getCreateTime);
+        PageHelper.startPage(page, size);
+        List<Book> books = bookUserMapper.selectList(wrapper);
+        PageInfo<Book> pageInfo = new PageInfo<>(books);
+        List<BookShowDTO> records = books.stream()
+                .map(book -> ConvertUtils.convert(book, BookShowDTO.class))
+                .collect(Collectors.toList());
+        return new PageResult<>(pageInfo.getTotal(), records);
     }
 
     /**
@@ -403,10 +421,10 @@ public class BookUserServiceImpl extends ServiceImpl<BookUserMapper, Book> imple
         try {
             SearchResponse<BookTagRelation> relationResp = elasticsearchClient.search(s -> s
                             .index(ElasticsearchConstant.ES_BOOK_TAG_INDEX)
-                            .query(q -> q.term(t -> t.field("tagId.keyword").value(bookPageDTO.getTagId())))
+                            .query(q -> q.term(t -> t.field("tagId").value(id)))
                             .from(from)
                             .size(size)
-                            .sort(sort -> sort.field(f -> f.field("bookId.keyword").order(SortOrder.Asc))),
+                            .sort(sort -> sort.field(f -> f.field("bookId").order(SortOrder.Asc))),
                     BookTagRelation.class
             );
             // 获取bookId列表

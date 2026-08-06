@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    password: ${MYSQL_PASSWORD:booktalk}
+  rabbitmq:
+    listener:
+      simple:
+        auto-startup: true
+
+logging:
+  level:
+    com.cc.booktalk: debug

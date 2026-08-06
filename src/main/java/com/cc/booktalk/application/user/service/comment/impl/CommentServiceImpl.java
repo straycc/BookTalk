@@ -2,7 +2,7 @@ package com.cc.booktalk.application.user.service.comment.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
-import com.cc.booktalk.application.user.service.recommendation.UserBehaviorEventDispatchService;
+import com.cc.booktalk.application.user.service.recommendation.behavior.UserBehaviorEventDispatchService;
 import com.cc.booktalk.common.constant.BusinessConstant;
 import com.cc.booktalk.common.constant.RedisCacheConstant;
 import com.cc.booktalk.common.context.UserContext;
@@ -18,12 +18,16 @@ import com.cc.booktalk.interfaces.dto.user.UserDTO;
 import com.cc.booktalk.common.result.PageResult;
 import com.cc.booktalk.interfaces.dto.user.comment.CommentPageDTO;
 import com.cc.booktalk.domain.entity.review.BookReview;
+import com.cc.booktalk.domain.entity.post.Post;
 import com.cc.booktalk.domain.entity.comment.Comment;
+import com.cc.booktalk.domain.entity.like.LikeRecord;
 import com.cc.booktalk.domain.entity.user.UserInfo;
 import com.cc.booktalk.domain.enums.TargetType;
 import com.cc.booktalk.interfaces.vo.user.comment.CommentVO;
 import com.cc.booktalk.interfaces.vo.user.user.UserVO;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.comment.CommentUserMapper;
+import com.cc.booktalk.infrastructure.persistence.user.mapper.like.LikeRecordMapper;
+import com.cc.booktalk.infrastructure.persistence.user.mapper.post.PostMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.review.ReviewUserMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserInfoUserMapper;
 import com.cc.booktalk.application.user.service.comment.CommentService;
@@ -32,6 +36,9 @@ import com.github.pagehelper.PageHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
@@ -42,6 +49,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 
 /**
  * <p>
@@ -72,7 +80,14 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
     private RedisTemplate<String,Object> customObjectRedisTemplate;
 
     @Resource
+    private RedisTemplate<String, String> customStringRedisTemplate;
+
+    @Resource
     private ReviewUserMapper reviewUserMapper;
+    @Resource
+    private PostMapper postMapper;
+    @Resource
+    private LikeRecordMapper likeRecordMapper;
     @Resource
     private UserInfoUserMapper userInfoUserMapper;
     @Resource
@@ -88,6 +103,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
      * @param commentDTO
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void commentPublish(Long rootId, CommentDTO commentDTO) {
         if (rootId == null || commentDTO == null || commentDTO.getRootId() == null) {
             throw new BaseException(BusinessConstant.PARAM_ERROR);
@@ -110,12 +126,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
             finalRootId = parent.getRootId();
             finalTargetType = parent.getTargetType(); // 继承父评论归属类型
         } else {
-            // 一级评论时校验 root 对象存在，这里只校验了Review
-            if (finalTargetType == TargetType.BOOKREVIEW && reviewUserMapper.selectById(finalRootId) ==
-                    null) {
-                throw new BaseException(BusinessConstant.REVIEW_NOTEXIST);
-            }
-            //TODO： 后续扩展书单完善
+            validateRootTarget(finalTargetType, finalRootId);
         }
 
         Comment comment = Comment.builder()
@@ -131,20 +142,8 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
         commentUserMapper.insert(comment);
 
         // 评论行为埋点（一级评论 / 回复评论）
-        if (finalTargetType == TargetType.BOOKREVIEW) {
-            String behaviorType = commentDTO.getParentId() == null ? "REVIEW_COMMENT" : "REVIEW_REPLY";
-            double behaviorScore = commentDTO.getParentId() == null ? 2.5 : 3.0;
-            UserBehaviorEvent userBehaviorEvent = UserBehaviorEvent.builder()
-                    .userId(UserContext.getUser().getId())
-                    .targetId(finalRootId)          // 用 rootId（归属书评ID）
-                    .targetType("REVIEW")
-                    .behaviorType(behaviorType)
-                    .behaviorScore(behaviorScore)
-                    .occurredAt(LocalDateTime.now())
-                    .build();
-
-            userBehaviorEventDispatchService.publish(userBehaviorEvent);
-        }
+        publishCommentBehavior(finalTargetType, commentDTO.getParentId(), finalRootId);
+        incrementTargetCommentCounter(finalTargetType, finalRootId);
 
         //消息通知
         publishCommentNotification(comment, finalTargetType);
@@ -156,6 +155,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
      * @param commentId
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void deleteComment(Long commentId) {
         if(commentId==null){
             throw new BaseException(BusinessConstant.PARAM_ERROR);
@@ -167,11 +167,32 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
             throw new BaseException(BusinessConstant.COMMENT_NOTEXIST);
         }
         // 查询是否为自己评论
-        Long currentUserId = UserContext.getUser().getId();
+        UserDTO currentUser = UserContext.getUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            throw new BaseException(BusinessConstant.WITH_NO_AUTHORIZATION);
+        }
+        Long currentUserId = currentUser.getId();
         if(!currentUserId.equals(comment.getUserId())){
             throw new BaseException(BusinessConstant.DELETE_COMMENT_ERROR);
         }
-        commentUserMapper.deleteById(commentId);
+
+        List<Comment> commentsInRoot = commentUserMapper.selectList(new LambdaQueryWrapper<Comment>()
+                .eq(Comment::getRootId, comment.getRootId())
+                .eq(Comment::getTargetType, comment.getTargetType()));
+        List<Long> commentIds = collectCommentSubtree(commentId, commentsInRoot);
+        if (commentIds.isEmpty()) {
+            throw new BaseException(BusinessConstant.COMMENT_NOTEXIST);
+        }
+
+        List<LikeRecord> likes = likeRecordMapper.selectList(new LambdaQueryWrapper<LikeRecord>()
+                .eq(LikeRecord::getTargetType, BusinessConstant.LIKE_TYPE_COMMENT)
+                .in(LikeRecord::getTargetId, commentIds));
+        likeRecordMapper.delete(new LambdaQueryWrapper<LikeRecord>()
+                .eq(LikeRecord::getTargetType, BusinessConstant.LIKE_TYPE_COMMENT)
+                .in(LikeRecord::getTargetId, commentIds));
+        commentUserMapper.delete(new LambdaQueryWrapper<Comment>().in(Comment::getId, commentIds));
+        decrementTargetCommentCounter(comment.getTargetType(), comment.getRootId(), commentIds.size());
+        invalidateCommentLikeCachesAfterCommit(likes, commentIds);
     }
 
 
@@ -244,11 +265,26 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
             throw new BaseException(BusinessConstant.REVIEW_NOTEXIST);
         }
 
-        // 查询书评的一级评论
+        return targetComments(bookReviewId, TargetType.REVIEW);
+    }
+
+    @Override
+    public List<CommentVO> postAllComments(Long postId) {
+        if (postId == null) {
+            throw new BaseException(BusinessConstant.PARAM_ERROR);
+        }
+        if (postMapper.selectById(postId) == null) {
+            throw new BaseException(BusinessConstant.POST_NOTEXIST);
+        }
+        return targetComments(postId, TargetType.POST);
+    }
+
+    private List<CommentVO> targetComments(Long rootId, TargetType targetType) {
+        // 查询目标的一级评论
         List<Comment> firstComments = commentUserMapper.selectList(
                 new LambdaQueryWrapper<Comment>()
-                        .eq(Comment::getRootId, bookReviewId)
-                        .eq(Comment::getTargetType, TargetType.BOOKREVIEW.getCode())
+                        .eq(Comment::getRootId, rootId)
+                        .eq(Comment::getTargetType, targetType.getCode())
                         .isNull(Comment::getParentId)
                         .orderByDesc(Comment::getCreateTime)
         );
@@ -256,8 +292,8 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
         // 查询所有子评论
         List<Comment> childComments = commentUserMapper.selectList(
                 new LambdaQueryWrapper<Comment>()
-                        .eq(Comment::getRootId, bookReviewId)
-                        .eq(Comment::getTargetType, TargetType.BOOKREVIEW.getCode())
+                        .eq(Comment::getRootId, rootId)
+                        .eq(Comment::getTargetType, targetType.getCode())
                         .isNotNull(Comment::getParentId)
                         .orderByAsc(Comment::getCreateTime)
         );
@@ -392,10 +428,13 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
 
             // 根据不同的目标类型发布通知
             switch (targetType) {
-                case BOOKREVIEW:
+                case REVIEW:
                     // 评论书评，通知书评作者
                     log.info("处理书评评论通知");
                     publishBookReviewCommentNotification(comment, currentUser);
+                    break;
+                case POST:
+                    publishPostCommentNotification(comment, currentUser);
                     break;
                 case COMMENT:
                     // 回复评论，通知被回复的评论作者
@@ -428,7 +467,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
         NotificationRequest request = NotificationRequest.comment(
                 bookReview.getUserId(),               // 接收通知的用户ID（书评作者）
                 comment.getRootId(),               // 目标ID（书评ID）
-                NotificationRequest.TargetType.BOOK_REVIEW, // 目标类型
+                NotificationRequest.TargetType.REVIEW, // 目标类型
                 comment.getContent(),               // 评论内容
                 currentUser.getId(),                 // 评论者ID
                 currentUser.getNickname(),           // 评论者昵称
@@ -436,6 +475,23 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
         );
 
         // 发布评论通知
+        notificationEventPublisher.publishCommentEvent(request);
+    }
+
+    private void publishPostCommentNotification(Comment comment, UserDTO currentUser) {
+        Post post = postMapper.selectById(comment.getRootId());
+        if (post == null || post.getUserId().equals(currentUser.getId())) {
+            return;
+        }
+        NotificationRequest request = NotificationRequest.comment(
+                post.getUserId(),
+                comment.getRootId(),
+                NotificationRequest.TargetType.POST,
+                comment.getContent(),
+                currentUser.getId(),
+                currentUser.getNickname(),
+                currentUser.getAvatarUrl()
+        );
         notificationEventPublisher.publishCommentEvent(request);
     }
 
@@ -491,6 +547,118 @@ public class CommentServiceImpl extends ServiceImpl<CommentUserMapper, Comment> 
         } catch (Exception e) {
             log.error("发布回复通知失败: commentId={}", comment.getId(), e);
         }
+    }
+
+    private void validateRootTarget(TargetType targetType, Long rootId) {
+        if (targetType == TargetType.REVIEW && reviewUserMapper.selectById(rootId) == null) {
+            throw new BaseException(BusinessConstant.REVIEW_NOTEXIST);
+        }
+        if (targetType == TargetType.POST && postMapper.selectById(rootId) == null) {
+            throw new BaseException(BusinessConstant.POST_NOTEXIST);
+        }
+    }
+
+    private void publishCommentBehavior(TargetType targetType, Long parentId, Long rootId) {
+        String behaviorType = resolveCommentBehaviorType(targetType, parentId);
+        if (behaviorType == null) {
+            return;
+        }
+        double behaviorScore = parentId == null ? 2.5 : 3.0;
+        userBehaviorEventDispatchService.publish(UserBehaviorEvent.builder()
+                .userId(UserContext.getUser().getId())
+                .targetId(rootId)
+                .targetType(targetType.getCode())
+                .behaviorType(behaviorType)
+                .behaviorScore(behaviorScore)
+                .occurredAt(LocalDateTime.now())
+                .build());
+    }
+
+    private String resolveCommentBehaviorType(TargetType targetType, Long parentId) {
+        if (targetType == TargetType.REVIEW) {
+            return parentId == null ? "REVIEW_COMMENT" : "REVIEW_REPLY";
+        }
+        if (targetType == TargetType.POST) {
+            return parentId == null ? "POST_COMMENT" : "POST_REPLY";
+        }
+        return null;
+    }
+
+    private void incrementTargetCommentCounter(TargetType targetType, Long rootId) {
+        if (targetType == TargetType.REVIEW) {
+            reviewUserMapper.update(null, new LambdaUpdateWrapper<BookReview>()
+                    .eq(BookReview::getId, rootId)
+                    .setSql("reply_count = IFNULL(reply_count, 0) + 1"));
+            return;
+        }
+        if (targetType == TargetType.POST) {
+            postMapper.update(null, new LambdaUpdateWrapper<Post>()
+                    .eq(Post::getId, rootId)
+                    .setSql("comment_count = IFNULL(comment_count, 0) + 1")
+                    .set(Post::getLastActiveTime, LocalDateTime.now()));
+            return;
+        }
+    }
+
+    private List<Long> collectCommentSubtree(Long commentId, List<Comment> comments) {
+        Map<Long, List<Long>> childrenByParent = comments.stream()
+                .filter(comment -> comment.getParentId() != null)
+                .collect(Collectors.groupingBy(Comment::getParentId,
+                        Collectors.mapping(Comment::getId, Collectors.toList())));
+        List<Long> result = new ArrayList<>();
+        List<Long> pending = new ArrayList<>();
+        pending.add(commentId);
+        for (int index = 0; index < pending.size(); index++) {
+            Long currentId = pending.get(index);
+            result.add(currentId);
+            pending.addAll(childrenByParent.getOrDefault(currentId, List.of()));
+        }
+        return result;
+    }
+
+    private void decrementTargetCommentCounter(TargetType targetType, Long rootId, int deletedCount) {
+        if (targetType == TargetType.REVIEW) {
+            reviewUserMapper.update(null, new LambdaUpdateWrapper<BookReview>()
+                    .eq(BookReview::getId, rootId)
+                    .setSql("reply_count = GREATEST(IFNULL(reply_count, 0) - " + deletedCount + ", 0)"));
+            return;
+        }
+        if (targetType == TargetType.POST) {
+            postMapper.update(null, new LambdaUpdateWrapper<Post>()
+                    .eq(Post::getId, rootId)
+                    .setSql("comment_count = GREATEST(IFNULL(comment_count, 0) - " + deletedCount + ", 0)")
+                    .set(Post::getLastActiveTime, LocalDateTime.now()));
+        }
+    }
+
+    private void invalidateCommentLikeCachesAfterCommit(List<LikeRecord> likes, List<Long> commentIds) {
+        Runnable invalidation = () -> {
+            try {
+                Map<Long, List<LikeRecord>> likesByComment = likes.stream()
+                        .collect(Collectors.groupingBy(LikeRecord::getTargetId));
+                for (Long deletedCommentId : commentIds) {
+                    String targetField = BusinessConstant.LIKE_TYPE_COMMENT + ':' + deletedCommentId;
+                    for (LikeRecord like : likesByComment.getOrDefault(deletedCommentId, List.of())) {
+                        customStringRedisTemplate.opsForSet().remove(
+                                RedisCacheConstant.LIKE_USER_PREFIX + like.getUserId(), targetField);
+                    }
+                    customStringRedisTemplate.delete(RedisCacheConstant.LIKE_TARGET_PREFIX + targetField);
+                    customStringRedisTemplate.delete(RedisCacheConstant.LIKE_COUNT_PREFIX + targetField);
+                }
+            } catch (Exception e) {
+                log.warn("评论点赞缓存失效失败: commentIds={}", commentIds, e);
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    invalidation.run();
+                }
+            });
+            return;
+        }
+        invalidation.run();
     }
 
 

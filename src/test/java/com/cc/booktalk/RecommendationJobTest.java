@@ -8,6 +8,7 @@ import com.cc.booktalk.interfaces.schedule.RecommendationJob;
 import com.cc.booktalk.interfaces.vo.user.ranking.BookRankingVO;
 import com.cc.booktalk.interfaces.vo.user.review.HotReviewVO;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.RedisTemplate;
 
@@ -21,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         webEnvironment = SpringBootTest.WebEnvironment.NONE,
         properties = "booktalk.websocket.enabled=true"
 )
+@Disabled("需要本地 MySQL、Redis、RabbitMQ 和完整演示数据，作为手工集成测试运行")
 public class RecommendationJobTest {
 
 

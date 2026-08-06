@@ -15,12 +15,12 @@ public class CommentDTO {
     private Long id;
 
     /**
-     * 评论目标ID
+     * 评论根目标ID
      */
     private Long rootId;
 
     /**
-     * 评论目标类型: REVIEW, COMMENT
+     * 评论目标类型: BOOK, REVIEW, POST, COMMENT
      */
     private String targetType;
 

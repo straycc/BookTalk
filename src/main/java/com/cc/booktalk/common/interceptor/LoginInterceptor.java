@@ -5,6 +5,8 @@ import cn.hutool.jwt.JWT;
 import com.cc.booktalk.common.context.UserContext;
 import com.cc.booktalk.common.jwt.JwtUtil;
 import com.cc.booktalk.interfaces.dto.user.UserDTO;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -17,7 +19,11 @@ import javax.servlet.http.HttpServletResponse;
  */
 
 @Component
+@Slf4j
+@RequiredArgsConstructor
 public class LoginInterceptor implements HandlerInterceptor {
+
+    private final JwtUtil jwtUtil;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -52,11 +58,19 @@ public class LoginInterceptor implements HandlerInterceptor {
 
         // 2. 校验 token
         try {
-            JWT jwt = JwtUtil.verifyToken(token);
-            UserDTO userDTO = JwtUtil.parseUserDTO(jwt);
+            JWT jwt = jwtUtil.verifyToken(token);
+            UserDTO userDTO = jwtUtil.parseUserDTO(jwt);
             if (userDTO == null) {
                 response.setStatus(HttpStatus.HTTP_UNAUTHORIZED);
                 response.getWriter().write("{\"message\":\"Token无效\"}");
+                return false;
+            }
+            if (requestUri != null && requestUri.startsWith("/admin/")
+                    && !"admin".equalsIgnoreCase(userDTO.getRole())) {
+                response.setStatus(HttpStatus.HTTP_FORBIDDEN);
+                response.setCharacterEncoding("UTF-8");
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":403,\"msg\":\"没有管理员权限\",\"data\":null}");
                 return false;
             }
 
@@ -67,10 +81,8 @@ public class LoginInterceptor implements HandlerInterceptor {
             response.setCharacterEncoding("UTF-8");
             response.setContentType("application/json;charset=UTF-8");
 
-            // 记录详细的错误信息用于调试
-            e.printStackTrace();
-            String errorMsg = "Token校验失败: " + e.getClass().getSimpleName() + " - " + e.getMessage();
-            response.getWriter().write("{\"message\":\"" + errorMsg + "\"}");
+            log.debug("Token 校验失败: {}", e.getMessage());
+            response.getWriter().write("{\"code\":401,\"msg\":\"登录状态无效或已过期\",\"data\":null}");
             return false;
         }
 

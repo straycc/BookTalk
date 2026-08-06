@@ -33,4 +33,31 @@ public class AiConversationSession {
 
     @Builder.Default
     private List<AiConversationTurn> turns = new ArrayList<>();
+
+    /**
+     * 推荐阶段：INIT / NEED_CLARIFY / INTENT_READY / RECOMMENDED。
+     */
+    private String recommendationPhase;
+
+    /**
+     * 最近一次意图摘要，作为会话候选缓存命中判断依据。
+     */
+    private String intentDigest;
+
+    /**
+     * 最近一次追问文案。
+     */
+    private String clarifyQuestion;
+
+    /**
+     * 当前会话候选书 ID（轻量缓存，避免重复查库）。
+     */
+    @Builder.Default
+    private List<Long> candidateBookIds = new ArrayList<>();
+
+    /**
+     * 当前会话已展示书 ID（用于去重）。
+     */
+    @Builder.Default
+    private List<Long> shownBookIds = new ArrayList<>();
 }

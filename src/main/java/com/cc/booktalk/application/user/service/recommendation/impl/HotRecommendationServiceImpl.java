@@ -48,8 +48,8 @@ public class HotRecommendationServiceImpl implements HotRecommendationService {
 
     @Override
     public List<PersonalizedRecVO> getHotRecommendations(Integer limit) {
+        int finalLimit = limit != null && limit > 0 ? limit : DEFAULT_RECOMMENDATION_COUNT;
         try {
-            int finalLimit = limit != null && limit > 0 ? limit : DEFAULT_RECOMMENDATION_COUNT;
             List<PersonalizedRecVO> hotFromRank = getHotRecommendationsFromRankingCache();
             if (!hotFromRank.isEmpty()) {
                 return hotFromRank.stream().limit(finalLimit).collect(Collectors.toList());
@@ -64,15 +64,15 @@ public class HotRecommendationServiceImpl implements HotRecommendationService {
             List<PersonalizedRecVO> refreshed = refreshHotRecommendationsCache(HOT_CACHE_PREWARM_COUNT);
             return refreshed.stream().limit(finalLimit).collect(Collectors.toList());
         } catch (Exception e) {
-            log.error("获取热门推荐失败", e);
-            return new ArrayList<>();
+            log.warn("读取热门推荐缓存或榜单失败，改用数据库计算", e);
+            return calculateHotRecommendations(finalLimit);
         }
     }
 
     @Override
     public List<PersonalizedRecVO> refreshHotRecommendationsCache(Integer limit) {
+        int finalLimit = limit != null && limit > 0 ? limit : HOT_CACHE_PREWARM_COUNT;
         try {
-            int finalLimit = limit != null && limit > 0 ? limit : HOT_CACHE_PREWARM_COUNT;
             bookRankingRefreshService.refreshHotBooksRanking();
             List<PersonalizedRecVO> hotFromRank = getHotRecommendationsFromRankingCache();
             if (!hotFromRank.isEmpty()) {
@@ -85,8 +85,8 @@ public class HotRecommendationServiceImpl implements HotRecommendationService {
             }
             return hotBooks;
         } catch (Exception e) {
-            log.error("刷新热门推荐缓存失败", e);
-            return new ArrayList<>();
+            log.warn("刷新热门推荐缓存失败，返回数据库计算结果", e);
+            return calculateHotRecommendations(finalLimit);
         }
     }
 
@@ -145,7 +145,7 @@ public class HotRecommendationServiceImpl implements HotRecommendationService {
 
     private List<PersonalizedRecVO> calculateHotRecommendations(int finalLimit) {
         int candidateLimit = Math.max(finalLimit * 5, 50);
-        List<Long> candidateBookIds = userBehaviorLogMapper.getHotBookCandidateIds(30, candidateLimit);
+        List<Long> candidateBookIds = userBehaviorLogMapper.getHotBookCandidateIds(7, candidateLimit);
         if (candidateBookIds == null || candidateBookIds.isEmpty()) {
             return buildFallbackHotBooks(finalLimit, LocalDateTime.now());
         }
@@ -161,7 +161,7 @@ public class HotRecommendationServiceImpl implements HotRecommendationService {
             if (base == null) {
                 continue;
             }
-            List<UserBehaviorLog> behaviors = userBehaviorLogMapper.getBookRecentBehaviors(bookId, 30);
+            List<UserBehaviorLog> behaviors = userBehaviorLogMapper.getBookRecentBehaviors(bookId, 7);
             if (behaviors == null || !hotBookRecDomain.enoughActions(behaviors.size())) {
                 continue;
             }
@@ -199,6 +199,9 @@ public class HotRecommendationServiceImpl implements HotRecommendationService {
 
     private List<PersonalizedRecVO> buildFallbackHotBooks(int limit, LocalDateTime now) {
         List<PersonalizedRecVO> fallback = bookUserMapper.getFallbackHotBooks(limit);
+        if (fallback == null || fallback.isEmpty()) {
+            return new ArrayList<>();
+        }
         for (PersonalizedRecVO item : fallback) {
             item.setAlgorithmType("POPULAR");
             item.setRecommendTime(now);

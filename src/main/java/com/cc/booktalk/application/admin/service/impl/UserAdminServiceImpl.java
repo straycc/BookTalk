@@ -21,6 +21,7 @@ import com.github.pagehelper.PageHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import javax.annotation.Resource;
 import java.util.List;
@@ -40,6 +41,12 @@ public class UserAdminServiceImpl extends ServiceImpl<UserAdminMapper, User> imp
 
     @Resource
     private UserAdminMapper userAdminMapper;
+
+    @Resource
+    private PasswordEncoder passwordEncoder;
+
+    @Resource
+    private JwtUtil jwtUtil;
 
     /**
      * 用户登录
@@ -61,13 +68,21 @@ public class UserAdminServiceImpl extends ServiceImpl<UserAdminMapper, User> imp
             throw new BaseException("用户不存在");
         }
         //2.检查密码是否正确
-        if(!user.getPassword().equals(SecureUtil.md5(password))){
+        if (!passwordMatches(password, user.getPassword())) {
             throw new BaseException("密码错误!");
         }
 
         //3.检查用户账号状态
         if(user.getStatus() == 0){
             throw new BaseException("账号冻结，无法登录!");
+        }
+        if (!"admin".equalsIgnoreCase(user.getRole())) {
+            throw new BaseException("当前账号没有管理员权限");
+        }
+
+        if (!user.getPassword().startsWith("$2")) {
+            user.setPassword(passwordEncoder.encode(password));
+            userAdminMapper.updateById(user);
         }
 
         //4.用户信息存储threadLocal
@@ -77,7 +92,7 @@ public class UserAdminServiceImpl extends ServiceImpl<UserAdminMapper, User> imp
         UserContext.saveUser(userDTO);
 
         //5.构造JWT令牌
-        String token = JwtUtil.generateToken(userDTO);
+        String token = jwtUtil.generateToken(userDTO);
 
         //6.返回登录成功数据
         return UserLoginVO.builder()
@@ -85,6 +100,16 @@ public class UserAdminServiceImpl extends ServiceImpl<UserAdminMapper, User> imp
                 .username(userDTO.getUsername())
                 .token(token)
                 .build();
+    }
+
+    private boolean passwordMatches(String rawPassword, String storedPassword) {
+        if (storedPassword == null || storedPassword.isBlank()) {
+            return false;
+        }
+        if (storedPassword.startsWith("$2")) {
+            return passwordEncoder.matches(rawPassword, storedPassword);
+        }
+        return storedPassword.equalsIgnoreCase(SecureUtil.md5(rawPassword));
     }
 
 

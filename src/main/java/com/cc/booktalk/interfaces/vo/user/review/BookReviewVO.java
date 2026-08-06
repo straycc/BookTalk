@@ -1,8 +1,10 @@
 package com.cc.booktalk.interfaces.vo.user.review;
 
+import com.cc.booktalk.interfaces.vo.user.tag.TagVO;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class BookReviewVO {
@@ -24,14 +26,14 @@ public class BookReviewVO {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
-    // 书评状态
-    private Integer status;
-
     // 当前用户是否点赞
     private Boolean likedByCurrentUser;
 
     // 评论数
     private Integer commentCount;
+
+    // 内容标签
+    private List<TagVO> tags;
 
 }
 

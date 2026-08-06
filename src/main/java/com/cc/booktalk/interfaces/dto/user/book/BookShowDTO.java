@@ -26,6 +26,9 @@ public class BookShowDTO implements Serializable {
     /** 作者（可包含国籍） */
     private String author;
 
+    /** 图书简介摘要 */
+    private String description;
+
     /** 评分（可选） */
     private Double averageScore;
 

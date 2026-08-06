@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -72,6 +73,44 @@ public class AiConversationServiceImpl implements AiConversationService {
     }
 
     @Override
+    public void updateRecommendationState(String sessionId,
+                                          Long userId,
+                                          String phase,
+                                          String intentDigest,
+                                          String clarifyQuestion,
+                                          List<Long> candidateBookIds,
+                                          List<Long> shownBookIds) {
+        AiConversationSession session = loadSession(userId, sessionId);
+        boolean changed = false;
+
+        if (!Objects.equals(session.getRecommendationPhase(), phase)) {
+            session.setRecommendationPhase(phase);
+            changed = true;
+        }
+        if (!Objects.equals(session.getIntentDigest(), intentDigest)) {
+            session.setIntentDigest(intentDigest);
+            changed = true;
+        }
+        if (!Objects.equals(session.getClarifyQuestion(), clarifyQuestion)) {
+            session.setClarifyQuestion(clarifyQuestion);
+            changed = true;
+        }
+        if (!Objects.equals(session.getCandidateBookIds(), candidateBookIds)) {
+            session.setCandidateBookIds(candidateBookIds == null ? new ArrayList<>() : new ArrayList<>(candidateBookIds));
+            changed = true;
+        }
+        if (!Objects.equals(session.getShownBookIds(), shownBookIds)) {
+            session.setShownBookIds(shownBookIds == null ? new ArrayList<>() : new ArrayList<>(shownBookIds));
+            changed = true;
+        }
+
+        if (changed) {
+            session.setUpdatedAt(LocalDateTime.now());
+            save(session);
+        }
+    }
+
+    @Override
     public void resetSession(String sessionId, Long userId) {
         redisTemplate.delete(buildKey(userId, sessionId));
     }
@@ -91,6 +130,9 @@ public class AiConversationServiceImpl implements AiConversationService {
                     .map(AiRecommendedBook::getBookTitle)
                     .collect(Collectors.joining("、"));
             parts.add("上次推荐：" + books);
+        }
+        if (session.getRecommendationPhase() != null && !session.getRecommendationPhase().isBlank()) {
+            parts.add("会话阶段：" + session.getRecommendationPhase());
         }
         if (session.getTurns() != null && !session.getTurns().isEmpty()) {
             String recentTurns = session.getTurns().stream()

@@ -18,6 +18,14 @@ public interface AiConversationService {
 
     void updateContext(String sessionId, Long userId, AiParsedIntent intent, List<AiRecommendedBook> books);
 
+    void updateRecommendationState(String sessionId,
+                                   Long userId,
+                                   String phase,
+                                   String intentDigest,
+                                   String clarifyQuestion,
+                                   List<Long> candidateBookIds,
+                                   List<Long> shownBookIds);
+
     void resetSession(String sessionId, Long userId);
 
     String summarizeConversation(AiConversationSession session);

@@ -6,6 +6,8 @@ import org.redisson.config.Config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.IOException;
 
@@ -13,10 +15,19 @@ import java.io.IOException;
 public class RedissonConfig {
 
     @Bean
-    public RedissonClient redissonClient() throws IOException {
-        Config config = Config.fromYAML(
-                new ClassPathResource("redisson.yml").getInputStream()
-        );
+    public RedissonClient redissonClient(RedisProperties redisProperties,
+                                         @Value("${app.redis.redisson.netty-threads:2}") int nettyThreads) {
+        Config config = new Config();
+        config.setNettyThreads(nettyThreads);
+        String address = "redis://" + redisProperties.getHost() + ":" + redisProperties.getPort();
+        config.useSingleServer()
+                .setAddress(address)
+                .setDatabase(redisProperties.getDatabase())
+                .setConnectionMinimumIdleSize(1)
+                .setConnectionPoolSize(10);
+        if (redisProperties.getPassword() != null && !redisProperties.getPassword().isBlank()) {
+            config.useSingleServer().setPassword(redisProperties.getPassword());
+        }
         return Redisson.create(config);
     }
 }

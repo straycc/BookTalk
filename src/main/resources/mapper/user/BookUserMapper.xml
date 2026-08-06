@@ -2,6 +2,23 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.cc.booktalk.infrastructure.persistence.user.mapper.book.BookUserMapper">
 
+    <update id="refreshReviewScoreStats">
+        UPDATE book b
+        LEFT JOIN (
+            SELECT book_id,
+                   ROUND(AVG(score), 2) AS average_score,
+                   COUNT(score) AS score_count
+            FROM book_review
+            WHERE book_id = #{bookId}
+              AND score IS NOT NULL
+            GROUP BY book_id
+        ) review_stats ON review_stats.book_id = b.id
+        SET b.average_score = COALESCE(review_stats.average_score, 0),
+            b.score_count = COALESCE(review_stats.score_count, 0),
+            b.update_time = CURRENT_TIMESTAMP(3)
+        WHERE b.id = #{bookId}
+    </update>
+
     <select id="getRecBookBaseByIds" resultType="com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO">
         SELECT
             b.id AS bookId,
@@ -37,6 +54,58 @@
             COALESCE(b.score_count, 0) DESC,
             COALESCE(b.average_score, 0) DESC,
             b.create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findBooksByCategoryIds" resultType="com.cc.booktalk.domain.recommendation.model.RecommendationBookCandidate">
+        SELECT
+            b.id AS bookId,
+            b.title AS bookTitle,
+            b.author AS author,
+            b.cover_url AS bookCover,
+            b.category_id AS categoryId,
+            c.name AS categoryName,
+            b.average_score AS averageScore,
+            b.score_count AS scoreCount,
+            b.favorite_count AS favoriteCount,
+            b.hot_score AS hotScore,
+            b.create_time AS createTime
+        FROM book b
+        LEFT JOIN category c ON b.category_id = c.id
+        WHERE b.category_id IN
+        <foreach collection="categoryIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        ORDER BY COALESCE(b.hot_score, 0) DESC,
+                 COALESCE(b.favorite_count, 0) DESC,
+                 COALESCE(b.average_score, 0) DESC,
+                 b.create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findBooksByAuthors" resultType="com.cc.booktalk.domain.recommendation.model.RecommendationBookCandidate">
+        SELECT
+            b.id AS bookId,
+            b.title AS bookTitle,
+            b.author AS author,
+            b.cover_url AS bookCover,
+            b.category_id AS categoryId,
+            c.name AS categoryName,
+            b.average_score AS averageScore,
+            b.score_count AS scoreCount,
+            b.favorite_count AS favoriteCount,
+            b.hot_score AS hotScore,
+            b.create_time AS createTime
+        FROM book b
+        LEFT JOIN category c ON b.category_id = c.id
+        WHERE b.author IN
+        <foreach collection="authors" item="author" open="(" separator="," close=")">
+            #{author}
+        </foreach>
+        ORDER BY COALESCE(b.hot_score, 0) DESC,
+                 COALESCE(b.favorite_count, 0) DESC,
+                 COALESCE(b.average_score, 0) DESC,
+                 b.create_time DESC
         LIMIT #{limit}
     </select>
 

@@ -7,6 +7,7 @@ import com.cc.booktalk.common.context.UserContext;
 import com.cc.booktalk.common.exception.BaseException;
 import com.cc.booktalk.common.result.Result;
 import com.cc.booktalk.interfaces.dto.user.UserLoginDTO;
+import com.cc.booktalk.interfaces.dto.user.UserPasswordChangeDTO;
 import com.cc.booktalk.interfaces.dto.user.UserProfileDTO;
 import com.cc.booktalk.interfaces.dto.user.UserRegisterDTO;
 import com.cc.booktalk.interfaces.vo.user.user.UserLoginVO;
@@ -49,7 +50,7 @@ public class UserController {
     @PostMapping("/register")
     public Result<Object> register(@Valid @RequestBody UserRegisterDTO userRegisterDTO){
         userService.register(userRegisterDTO);
-        log.info("用户名:" + userRegisterDTO.getUsername() +", 注册成功!");
+        log.info("用户注册成功: username={}", userRegisterDTO.getUsername());
         return Result.success();
     }
 
@@ -88,9 +89,16 @@ public class UserController {
      */
     @ApiOperation("修改用户基本信息")
     @PutMapping("/profile/user-info")
-    public Result<Object> revise(@RequestBody UserProfileDTO userProfileDTO){
-        log.info("用戶："+userProfileDTO.getUsername()+"修改个人信息。");
+    public Result<Object> revise(@Valid @RequestBody UserProfileDTO userProfileDTO){
+        log.info("用户修改个人资料: userId={}", UserContext.getUser().getId());
         userService.reviseProfile(userProfileDTO);
+        return Result.success();
+    }
+
+    @ApiOperation("修改当前用户密码")
+    @PutMapping("/profile/password")
+    public Result<Object> changePassword(@Valid @RequestBody UserPasswordChangeDTO passwordChangeDTO) {
+        userService.changePassword(passwordChangeDTO);
         return Result.success();
     }
 

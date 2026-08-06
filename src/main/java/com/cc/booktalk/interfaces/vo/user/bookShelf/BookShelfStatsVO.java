@@ -26,6 +26,9 @@ public class BookShelfStatsVO {
      */
     private Integer readCount = 0;
 
+    /** 本年度读完数量 */
+    private Integer yearlyReadCount = 0;
+
     /**
      * 总计数量
      */

@@ -19,7 +19,7 @@ public class BusinessConstant {
 
     //用户角色相关
     public static final String USER_ROLE_USER = "user";
-    public static final String USER_ROLE_ADMIN = "管理员用户";
+    public static final String USER_ROLE_ADMIN = "admin";
     public static final String USERNAME_REPEAT = "用户名重复";
 
     public static final Long USER_ROLE_ADMIN_ID = 0L;
@@ -70,7 +70,6 @@ public class BusinessConstant {
     public static final  String REVIEW_NOTEXIST = "书评不存在";
 
     public static final  String REVIEW_BOOK_NOTEXIST = "书评书籍不存在";
-    public static final  Integer REVIEW_WAIT_AUDIT = 1; // 书评待审核
     public static final  Integer REVIEW_TYPE_SHORT = 0; // 短书评
     public static final  Integer REVIEW_TYPE_LONG = 1; // 长书评
 
@@ -89,18 +88,27 @@ public class BusinessConstant {
 
     //点赞相关内容
     public static final  String Like_RECORED_NOTEXIST = "点赞记录不存在，无法取消";
-    public static final  String LIKE_TYPE_BOOKLIST = "bookList";
-    public static final  String LIKE_TYPE_REVIEW = "bookReview";
-    public static final  String LIKE_TYPE_COMMENT = "comment";
+    public static final  String LIKE_TYPE_REVIEW = "REVIEW";
+    public static final  String LIKE_TYPE_POST = "POST";
+    public static final  String LIKE_TYPE_COMMENT = "COMMENT";
 
-    //书单相关内容
-    public static final  String EMPTY_BOOKLIST= "不允许建立空书单";
-    public static final  String CREAT_BOOKLIST_ERROR= "建立书单失败";
-    public static final  String BOOKLIST_NOTEXIST= "书单不存在";
-    public static final  String NOT_BOOKLIST_OWER= "不能操作他人书单";
-    public static final  String SQL_BOOK_LIST_ID = "book_list_id";
-    public static final  String BOOKLIST_REPEAT_BOOK= "不能重复添加书籍";
-    public static final  String BOOKLIST_NOTEXIST_BOOK= "书单中不存在该书籍";
+    //帖子相关内容
+    public static final String POST_NOTEXIST = "帖子不存在";
+    public static final String POST_CONTENT_EMPTY = "帖子内容不能为空";
+    public static final String POST_TITLE_EMPTY = "帖子标题不能为空";
+    public static final String POST_CREATE_SUCCESS = "发帖成功";
+    public static final String POST_SORT_HOT = "hot";
+    public static final String POST_SORT_LATEST = "latest";
+
+    //广场相关内容
+    public static final String SQUARE_TYPE_ALL = "all";
+    public static final String SQUARE_TYPE_REVIEW = "review";
+    public static final String SQUARE_TYPE_DISCUSSION = "discussion";
+
+    //内容标签相关内容
+    public static final String CONTENT_TYPE_REVIEW = "REVIEW";
+    public static final String CONTENT_TYPE_POST = "POST";
+    public static final int CONTENT_TAG_LIMIT = 5;
 
     //个人书架相关内容
     public static final  String BOOK_SHELF_ALREADY_EXISTS= "书籍已在书架中";

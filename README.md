@@ -1,95 +1,119 @@
 # BookTalk
 
-## 项目描述
-BookTalk 是一个面向读者的图书分享与讨论平台后端，采用领域驱动分层思想组织代码。平台支持用户发现图书、发布书评、参与评论点赞、管理个人书架，并根据阅读行为获取个性化推荐。系统同时提供实时通知、基于 Elasticsearch 的搜索能力与事件驱动处理机制。
+BookTalk 是一个面向读者的图书发现、书评讨论和个人书架应用。项目包含 Spring Boot 后端与 Vue 3 前端，核心关注阅读决策和社区互动，而非在线电子书阅读。
 
-## 系统架构
-项目采用分层架构，依赖方向明确：
+## 已实现能力
 
-`interfaces -> application -> domain`
-
-- `interfaces`：接口层（Controller、MQ Consumer、Event Listener、Schedule Job）
-- `application`：应用层（用例编排、事务协调、流程控制）
-- `domain`：领域层（核心业务规则、热度与推荐计算）
-- `infrastructure`：基础设施层（持久化、缓存、消息、搜索、外部服务集成）
-- `common`：公共能力层（工具、异常、结果封装等）
-
-架构规则：接口层保持薄壳，领域层承载核心业务逻辑。
+- 图书发现：分类、标签、全文搜索和图书详情。
+- 书评与社区：发布书评、帖子、评论、点赞、标签关联和通知。
+- 个人书架：想读、在读、已读状态管理与年度阅读统计。
+- 推荐：用户行为采集、兴趣画像、标签/分类/作者召回、已交互图书过滤、热门兜底和 Redis 缓存。
+- 数据一致性：评论、点赞和书评评分聚合在事务内维护；图书评分统一来自 `book_review.score`。
+- AI 基础能力：保留会话和推荐解释基础设施，后续将扩展为阅读决策助手。
 
 ## 技术栈
 
-| 类别 | 技术 | 版本 | 用途 |
-|---|---|---|---|
-| 框架 | Spring Boot | 2.6.13 | 核心应用框架 |
-| 语言 | Java | 11 | 开发语言 |
-| 数据库 | MySQL | 8.0.30 | 主数据存储 |
-| ORM | MyBatis-Plus | 3.5.7 | 数据库操作与映射 |
-| 缓存 | Redis + Redisson | 3.23.3 | 分布式缓存与锁 |
-| 搜索 | Elasticsearch | 8.13.0 | 全文图书检索 |
-| 消息队列 | RabbitMQ | - | 事件驱动通信 |
-| 任务调度 | XXL-Job | 2.4.0 | 分布式定时任务 |
-| 文件存储 | Aliyun OSS | 3.17.2 | 图片与文件存储 |
-| 实时通信 | WebSocket | - | 实时通知 |
-| 认证 | JWT | - | Token 认证 |
-| 工具库 | Hutool | 5.8.21 | Java 工具类库 |
+| 层级 | 技术 |
+| --- | --- |
+| 后端 | Java 11, Spring Boot 2.6, MyBatis-Plus |
+| 前端 | Vue 3, Vite, Vue Router, Lucide |
+| 数据 | MySQL 8, Redis, RabbitMQ |
+| 搜索 | Elasticsearch 8（可选） |
+| 其他 | Redisson, WebSocket, JWT, Aliyun OSS |
 
-## 核心特点
-
-### 1. 搜索与内容发现
-- 基于 Elasticsearch 的图书全文检索
-- 支持分类与标签筛选
-
-### 2. 社交互动
-- 书评与评分
-- 评论与点赞
-- 书单创建与分享
-- 个人书架与阅读状态管理
-
-### 3. 个性化推荐
-- 基于用户行为与兴趣标签进行推荐
-- 热门内容兜底，提升冷启动体验
-- AOP 行为采集支持兴趣更新与推荐计算
-
-### 4. 排行与趋势发现
-- 热门图书排行
-- 热门书评排行
-- 支持日/周/月周期排行
-
-### 5. 实时通知
-- 基于 RabbitMQ + WebSocket 的实时触达
-- 支持书评回复、点赞动态、系统通知等场景
-
-### 6. 可扩展架构能力
-- 事件驱动解耦核心链路（通知、行为、推荐）
-- Redis + Redisson 支撑高频读写与并发控制
-- XXL-Job 支撑推荐与排行的周期刷新任务
-
-## 项目结构
+## 目录
 
 ```text
-src/main/java/com/cc/booktalk/
-├── application/
-├── domain/
-├── infrastructure/
-├── interfaces/
-└── common/
+BookTalk/
+├── booktalk-web/              Vue 3 前端
+├── sql/                       建表、演示数据和迁移脚本
+├── src/main/java/             后端代码
+│   └── com/cc/booktalk/
+│       ├── application/       用例和事务编排
+│       ├── domain/            业务模型与规则
+│       ├── infrastructure/    持久化、缓存、消息和外部服务
+│       └── interfaces/        HTTP、MQ、WebSocket 和定时任务入口
+├── docker-compose.yml         本地依赖服务
+└── .env.example               环境变量样例
 ```
 
-详细结构可参考 `src/main/java/com/cc/booktalk/README-ARCH.md`。
+## 本地启动
 
-## 快速启动
+### 1. 启动依赖服务
 
-1. 准备依赖服务：MySQL、Redis、RabbitMQ、Elasticsearch
-2. 配置 `src/main/resources/application.yaml` 与环境变量
-3. 启动项目：
+复制 `.env.example` 为本地 `.env`，按需要调整端口和密码，然后启动 MySQL、Redis、RabbitMQ：
 
 ```bash
-mvn clean spring-boot:run
+docker compose up -d mysql redis rabbitmq
 ```
 
-或：
+Elasticsearch 仅在需要搜索功能时启动：
 
 ```bash
-mvn clean package
-java -jar target/*.jar
+docker compose --profile search up -d elasticsearch
 ```
+
+默认 MySQL 数据库为 `book_talk`，根密码为 `booktalk`。首次创建容器时会执行 `sql/booktalk.sql`。
+
+### 2. 初始化演示数据
+
+在数据库创建完成后执行：
+
+```bash
+docker exec -i booktalk-mysql mysql -uroot -pbooktalk book_talk < sql/booktalk-demo-data.sql
+```
+
+Windows PowerShell：
+
+```powershell
+Get-Content -Raw sql/booktalk-demo-data.sql | docker exec -i booktalk-mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" book_talk'
+```
+
+演示账号：`alice`、`bob`、`carol`，密码均为 `BookTalk@123`。
+
+### 3. 启动后端
+
+项目使用本机 Maven；当前不提供 Maven Wrapper。
+
+```bash
+mvn spring-boot:run
+```
+
+后端默认地址：`http://localhost:8081`。
+
+常用环境变量见 `.env.example`，包括 `MYSQL_*`、`REDIS_*`、`RABBITMQ_*`、`ELASTICSEARCH_URIS`、`JWT_SECRET` 和 `AI_*`。Spring Boot 不会自动读取项目根目录的 `.env`，请在 IDE 运行配置、系统环境变量或容器环境中设置它们。
+
+### 4. 启动前端
+
+```bash
+cd booktalk-web
+npm install
+npm run dev
+```
+
+前端默认地址：`http://localhost:5173`，默认直连后端 `http://127.0.0.1:8081`。如需修改后端地址，在 `booktalk-web/.env.local` 中设置 `VITE_API_BASE_URL`。
+
+## 数据库脚本
+
+- `sql/booktalk.sql`：全新环境的完整表结构。
+- `sql/booktalk-demo-data.sql`：可重复执行的本地演示数据。
+- `sql/migrations/`：已有数据库的顺序迁移脚本。生产或保留数据的环境请先备份，再按日期顺序执行。
+
+评分来源已收敛为 `book_review.score`；`book.average_score` 与 `book.score_count` 是聚合字段，由书评发布、修改、删除时同步重算。
+
+## 验证
+
+```bash
+mvn test
+```
+
+前端构建验证：
+
+```bash
+cd booktalk-web
+npm run build
+```
+
+## 下一步
+
+推荐链路已经可以作为工具层使用。下一阶段计划实现阅读决策助手：根据自然语言需求调用搜索、推荐和书架能力，返回可操作的图书卡片；不依赖在线阅读或电子书全文。

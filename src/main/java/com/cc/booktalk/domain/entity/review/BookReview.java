@@ -75,20 +75,9 @@ public class BookReview implements Serializable {
     private Integer replyCount;
 
     /**
-     * 状态：1-待审核，2-已通过，0-驳回/屏蔽
-     */
-    private Integer status;
-
-    /**
      * 热度值
      */
     private double hotScore;
-
-    /**
-     * 审核备注
-     */
-    private String auditRemark;
-
 
     /**
      * 创建时间

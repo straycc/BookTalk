@@ -1,7 +1,7 @@
 package com.cc.booktalk.interfaces.schedule;
 
-import com.cc.booktalk.application.user.service.recommendation.RecommendationCacheRefreshService;
-import com.xxl.job.core.handler.annotation.XxlJob;
+import com.cc.booktalk.application.user.service.recommendation.RecommendationService;
+import com.cc.booktalk.application.user.service.post.PostHotRefreshService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
@@ -16,21 +16,20 @@ import javax.annotation.Resource;
 @Component
 public class RecommendationJob {
     @Resource
-    private RecommendationCacheRefreshService recommendationCacheRefreshService;
+    private RecommendationService recommendationService;
 
-    @XxlJob("updateActivateUserRec")
-    @Scheduled(cron = "0 0 3 * * ?")
-    public void updateActivateUserRecommendations() {
-        recommendationCacheRefreshService.updateActivateUserRecommendations();
-    }
+    @Resource
+    private PostHotRefreshService postHotRefreshService;
 
-
-    /**
-     * 定时刷新热门图书推荐缓存
-     */
-    @XxlJob("updateHotRec")
     @Scheduled(cron = "0 0 */6 * * ?")
     public void updateHotRecommendations() {
-        recommendationCacheRefreshService.updateHotRecommendations();
+        recommendationService.refreshHotRecommendationsCache(50);
+        recommendationService.refreshHotReviewRecommendationsCache("daily", 20);
+        recommendationService.refreshHotReviewRecommendationsCache("weekly", 20);
+    }
+
+    @Scheduled(cron = "0 */30 * * * ?")
+    public void refreshPostHotScore() {
+        postHotRefreshService.refreshPostHotScores();
     }
 }

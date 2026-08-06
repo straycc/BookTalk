@@ -7,9 +7,10 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum TargetType {
-    BOOKREVIEW( "bookReview"),
-    COMMENT("comment"),
-    BOOKLIST("bookList");
+    BOOK("BOOK"),
+    REVIEW("REVIEW"),
+    POST("POST"),
+    COMMENT("COMMENT");
 
     @EnumValue
     private final String code;

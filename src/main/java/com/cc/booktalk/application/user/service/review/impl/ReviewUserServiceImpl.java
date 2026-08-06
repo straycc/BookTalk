@@ -4,7 +4,9 @@ import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.cc.booktalk.application.user.service.content.ContentTagService;
 import com.cc.booktalk.common.constant.BusinessConstant;
+import com.cc.booktalk.common.constant.RedisCacheConstant;
 import com.cc.booktalk.common.context.UserContext;
 import com.cc.booktalk.common.exception.BaseException;
 import com.cc.booktalk.common.utils.CheckPageParam;
@@ -13,11 +15,15 @@ import com.cc.booktalk.interfaces.dto.user.review.BookReviewDTO;
 import com.cc.booktalk.interfaces.dto.user.review.PageReviewDTO;
 import com.cc.booktalk.domain.entity.review.BookReview;
 import com.cc.booktalk.domain.entity.comment.Comment;
+import com.cc.booktalk.domain.entity.like.LikeRecord;
+import com.cc.booktalk.domain.entity.notification.Notification;
 import com.cc.booktalk.domain.entity.user.UserInfo;
 import com.cc.booktalk.interfaces.vo.user.review.BookReviewVO;
 import com.cc.booktalk.domain.enums.TargetType;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.book.BookUserMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.comment.CommentUserMapper;
+import com.cc.booktalk.infrastructure.persistence.user.mapper.like.LikeRecordMapper;
+import com.cc.booktalk.infrastructure.persistence.user.mapper.notification.NotificationMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.review.ReviewUserMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserInfoUserMapper;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.user.UserMapper;
@@ -25,7 +31,12 @@ import com.cc.booktalk.application.user.service.review.ReviewUserService;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import org.springframework.stereotype.Service;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
@@ -43,6 +54,7 @@ import java.util.stream.Collectors;
  * @since 2025-06-30
  */
 @Service
+@Slf4j
 public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookReview> implements ReviewUserService {
 
     @Resource
@@ -54,10 +66,21 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
     @Resource
     private CommentUserMapper commentUserMapper;
     @Resource
+    private LikeRecordMapper likeRecordMapper;
+    @Resource
+    private NotificationMapper notificationMapper;
+    @Resource
+    private RedisTemplate<String, String> customStringRedisTemplate;
+    @Resource
+    private RedisTemplate<String, Object> customObjectRedisTemplate;
+    @Resource
     private UserMapper userMapper;
 
     @Resource
     private UserInfoUserMapper userInfoUserMapper;
+
+    @Resource
+    private ContentTagService contentTagService;
 
 
 
@@ -67,6 +90,7 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
      * @param bookReviewDTO
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void publish(BookReviewDTO bookReviewDTO) {
         // 1.检查参数
         if(bookReviewDTO.getBookId() == null  || bookReviewDTO.getContent() == null || bookReviewDTO.getContent().trim().isEmpty()){
@@ -82,6 +106,13 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
         int type = bookReviewDTO.getType() == null
                 ? BusinessConstant.REVIEW_TYPE_SHORT
                 : bookReviewDTO.getType();
+        if (type != BusinessConstant.REVIEW_TYPE_SHORT && type != BusinessConstant.REVIEW_TYPE_LONG) {
+            throw new BaseException(BusinessConstant.REVIEW_TYPE_ERROR);
+        }
+        if (bookReviewDTO.getScore() != null
+                && (bookReviewDTO.getScore() < 1 || bookReviewDTO.getScore() > 10)) {
+            throw new BaseException("评分必须在1到10之间");
+        }
 
         // 处理标题（只有长评才需要）
         String title = null;
@@ -99,12 +130,16 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
                 .title(title) // 短评时 title 可能为 null
                 .content(bookReviewDTO.getContent())
                 .score(bookReviewDTO.getScore())
+                .likeCount(0)
+                .replyCount(0)
                 .createTime(LocalDateTime.now())
                 .updateTime(LocalDateTime.now())
                 .build();
 
         // 插入数据库
         reviewUserMapper.insert(bookReview);
+        contentTagService.replaceContentTags(bookReview.getId(), BusinessConstant.CONTENT_TYPE_REVIEW, bookReviewDTO.getTagIds());
+        bookUserMapper.refreshReviewScoreStats(bookReview.getBookId());
     }
 
 
@@ -114,9 +149,9 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
      * @param bookReviewDTO
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateBookReview(Long bookReviewId, BookReviewDTO bookReviewDTO) {
-        if (bookReviewId == null || bookReviewDTO == null || bookReviewDTO.getBookId() == null
-                || bookReviewDTO.getUserId() == null || !StringUtils.hasText(bookReviewDTO.getContent())) {
+        if (bookReviewId == null || bookReviewDTO == null || !StringUtils.hasText(bookReviewDTO.getContent())) {
             throw new BaseException(BusinessConstant.PARAM_ERROR);
         }
         // 检查书评是否存在
@@ -127,14 +162,26 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
 
         // 检查用户权限（是否为自己书评）
         Long currentUserId = UserContext.getUser().getId();
-        if(!currentUserId.equals(bookReviewDTO.getUserId())){
+        if (!currentUserId.equals(existingReview.getUserId())) {
             throw new BaseException(BusinessConstant.REVIEW_AUTH_ERROR);
+        }
+
+        if (bookReviewDTO.getScore() != null
+                && (bookReviewDTO.getScore() < 1 || bookReviewDTO.getScore() > 10)) {
+            throw new BaseException("评分必须在1到10之间");
         }
 
         // 构建 BookReview 实体
         BookReview bookReview = new BookReview();
-        BeanUtil.copyProperties(bookReviewDTO, bookReview);
+        bookReview.setId(bookReviewId);
+        bookReview.setType(bookReviewDTO.getType());
+        bookReview.setTitle(bookReviewDTO.getTitle());
+        bookReview.setContent(bookReviewDTO.getContent().trim());
+        bookReview.setScore(bookReviewDTO.getScore());
+        bookReview.setUpdateTime(LocalDateTime.now());
         reviewUserMapper.updateById(bookReview);
+        contentTagService.replaceContentTags(bookReviewId, BusinessConstant.CONTENT_TYPE_REVIEW, bookReviewDTO.getTagIds());
+        bookUserMapper.refreshReviewScoreStats(existingReview.getBookId());
     }
 
 
@@ -143,6 +190,7 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
      * @param bookReviewId
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void deleteBookReview(Long bookReviewId) {
         if (bookReviewId == null || bookReviewId <= 0) {
             throw new BaseException(BusinessConstant.PARAM_ERROR);
@@ -153,8 +201,30 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
         if (existingReview == null) {
             throw new BaseException(BusinessConstant.REVIEW_NOTEXIST);
         }
+        if (!UserContext.getUser().getId().equals(existingReview.getUserId())) {
+            throw new BaseException(BusinessConstant.REVIEW_AUTH_ERROR);
+        }
+        List<Comment> comments = commentUserMapper.selectList(new LambdaQueryWrapper<Comment>()
+                .eq(Comment::getRootId, bookReviewId)
+                .eq(Comment::getTargetType, TargetType.REVIEW));
+        List<Long> commentIds = comments.stream().map(Comment::getId).collect(Collectors.toList());
+        List<LikeRecord> reviewLikes = deleteLikes(BusinessConstant.LIKE_TYPE_REVIEW, List.of(bookReviewId));
+        List<LikeRecord> commentLikes = deleteLikes(BusinessConstant.LIKE_TYPE_COMMENT, commentIds);
+        if (!commentIds.isEmpty()) {
+            commentUserMapper.delete(new LambdaQueryWrapper<Comment>().in(Comment::getId, commentIds));
+        }
+        notificationMapper.delete(new LambdaQueryWrapper<Notification>()
+                .eq(Notification::getTargetType, "REVIEW")
+                .eq(Notification::getTargetId, bookReviewId));
+        if (!commentIds.isEmpty()) {
+            notificationMapper.delete(new LambdaQueryWrapper<Notification>()
+                    .eq(Notification::getTargetType, "COMMENT")
+                    .in(Notification::getTargetId, commentIds));
+        }
+        contentTagService.deleteContentTags(bookReviewId, BusinessConstant.CONTENT_TYPE_REVIEW);
         reviewUserMapper.deleteById(bookReviewId);
-        // TODO 删除redis/ES 书评内容
+        bookUserMapper.refreshReviewScoreStats(existingReview.getBookId());
+        invalidateLikeCachesAfterCommit(reviewLikes, commentLikes, true);
     }
 
     /**
@@ -226,7 +296,7 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
                     // 查询评论数
                     LambdaQueryWrapper<Comment> commentWrapper = new LambdaQueryWrapper<>();
                     commentWrapper.eq(Comment::getRootId, review.getId())
-                                  .eq(Comment::getTargetType, TargetType.BOOKREVIEW);
+                                  .eq(Comment::getTargetType, TargetType.REVIEW);
                     Long commentCount = commentUserMapper.selectCount(commentWrapper);
                     vo.setCommentCount(commentCount.intValue());
 
@@ -236,6 +306,7 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
                         vo.setNickName(userInfo.getNickname());
                         vo.setAvatarUrl(userInfo.getAvatarUrl());
                     }
+                    vo.setTags(contentTagService.getTagsByContent(review.getId(), BusinessConstant.CONTENT_TYPE_REVIEW));
                     return vo;
                 })
                 .collect(Collectors.toList());
@@ -259,6 +330,9 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
             throw new BaseException(BusinessConstant.PARAM_ERROR);
         }
         BookReview bookReview = reviewUserMapper.selectById(bookReviewId);
+        if (bookReview == null) {
+            throw new BaseException(BusinessConstant.REVIEW_NOTEXIST);
+        }
         BookReviewVO bookReviewVO = new BookReviewVO();
         bookReviewVO.setBookReviewId(bookReviewId);
         BeanUtil.copyProperties(bookReview, bookReviewVO);
@@ -266,7 +340,7 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
         // 查询评论数
         LambdaQueryWrapper<Comment> commentWrapper = new LambdaQueryWrapper<>();
         commentWrapper.eq(Comment::getRootId, bookReviewId)
-                      .eq(Comment::getTargetType, TargetType.BOOKREVIEW);
+                      .eq(Comment::getTargetType, TargetType.REVIEW);
         Long commentCount = commentUserMapper.selectCount(commentWrapper);
         bookReviewVO.setCommentCount(commentCount.intValue());
 
@@ -279,7 +353,57 @@ public class ReviewUserServiceImpl extends ServiceImpl<ReviewUserMapper, BookRev
             bookReviewVO.setNickName(userInfo.getNickname());
             bookReviewVO.setAvatarUrl(userInfo.getAvatarUrl());
         }
+        bookReviewVO.setTags(contentTagService.getTagsByContent(bookReview.getId(), BusinessConstant.CONTENT_TYPE_REVIEW));
         return bookReviewVO;
+    }
+
+    private List<LikeRecord> deleteLikes(String targetType, List<Long> targetIds) {
+        if (targetIds == null || targetIds.isEmpty()) {
+            return List.of();
+        }
+        List<LikeRecord> likes = likeRecordMapper.selectList(new LambdaQueryWrapper<LikeRecord>()
+                .eq(LikeRecord::getTargetType, targetType)
+                .in(LikeRecord::getTargetId, targetIds));
+        likeRecordMapper.delete(new LambdaQueryWrapper<LikeRecord>()
+                .eq(LikeRecord::getTargetType, targetType)
+                .in(LikeRecord::getTargetId, targetIds));
+        return likes;
+    }
+
+    private void invalidateLikeCachesAfterCommit(List<LikeRecord> reviewLikes, List<LikeRecord> commentLikes,
+                                                 boolean invalidateReviewRanking) {
+        Runnable invalidation = () -> {
+            try {
+                List<LikeRecord> likes = new java.util.ArrayList<>();
+                likes.addAll(reviewLikes);
+                likes.addAll(commentLikes);
+                Map<String, List<LikeRecord>> likesByTarget = likes.stream().collect(Collectors.groupingBy(
+                        like -> like.getTargetType() + ':' + like.getTargetId()));
+                for (Map.Entry<String, List<LikeRecord>> entry : likesByTarget.entrySet()) {
+                    for (LikeRecord like : entry.getValue()) {
+                        customStringRedisTemplate.opsForSet().remove(
+                                RedisCacheConstant.LIKE_USER_PREFIX + like.getUserId(), entry.getKey());
+                    }
+                    customStringRedisTemplate.delete(RedisCacheConstant.LIKE_TARGET_PREFIX + entry.getKey());
+                    customStringRedisTemplate.delete(RedisCacheConstant.LIKE_COUNT_PREFIX + entry.getKey());
+                }
+                if (invalidateReviewRanking) {
+                    customObjectRedisTemplate.delete(RedisCacheConstant.RANKING_HOT_REVIEWS_PREFIX + "weekly");
+                }
+            } catch (Exception e) {
+                log.warn("删除书评后的点赞缓存失效失败", e);
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    invalidation.run();
+                }
+            });
+            return;
+        }
+        invalidation.run();
     }
 
 

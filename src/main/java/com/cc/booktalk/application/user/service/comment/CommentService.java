@@ -49,4 +49,11 @@ public interface CommentService extends IService<Comment> {
      * @return
      */
     List<CommentVO> bookReviewAllCommments(Long bookReviewId);
+
+    /**
+     * 查询某个帖子的所有评论
+     * @param postId 帖子 ID
+     * @return 树形评论列表
+     */
+    List<CommentVO> postAllComments(Long postId);
 }

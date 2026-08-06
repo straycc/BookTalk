@@ -7,13 +7,15 @@ import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class ElasticsearchConfig {
 
     @Bean
-    public RestClient restClient() {
-        return RestClient.builder(new HttpHost("192.168.72.128", 9200)).build();
+    public RestClient restClient(@Value("${spring.elasticsearch.uris}") String uri) {
+        String firstUri = uri.split(",")[0].trim();
+        return RestClient.builder(HttpHost.create(firstUri)).build();
     }
 
     @Bean

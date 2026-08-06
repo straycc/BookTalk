@@ -58,10 +58,10 @@ public class UserConverter {
         if (userInfo != null) {
             userVO.setNickname(userInfo.getNickname());
             userVO.setAvatarUrl(userInfo.getAvatarUrl());
-            userVO.setExperience(userInfo.getExperience());
             userVO.setBackground(userInfo.getBackground());
             userVO.setGender(userInfo.getGender());
-            userVO.setLevel(userInfo.getLevel());
+            userVO.setBirthday(userInfo.getBirthday());
+            userVO.setRegion(userInfo.getRegion());
             userVO.setSignature(userInfo.getSignature());
             userVO.setCreateTime(userInfo.getCreateTime());
             userVO.setUpdateTime(userInfo.getUpdateTime());

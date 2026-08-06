@@ -35,6 +35,8 @@ public class RedisCacheConstant {
     public static final String RECOMMENDATIONS_HOT = "recommendation:hot_books"; // 热门推荐
     public static final String RECOMMENDATIONS_HOT_REVIEWS_PREFIX = "recommendation:hot_reviews:"; // 热门书评推荐
     public static final String USER_TOP_INTEREST_PREFIX = "user:top_interests:"; // 用户兴趣标签
+    public static final String AI_CONVERSATION_PREFIX = "ai:conversation:"; // AI 会话缓存
+    public static final String SQUARE_FEED_PREFIX = "square:feed:"; // 广场流缓存
 
     public static final String RANKING_HOT_REVIEWS_PREFIX = "ranking:reviews:hot_reviews:"; // 热门书评榜单前缀
     public static final String RANKING_HOT_BOOKS_PREFIX = "ranking:books:hot_books:"; // 热门书籍榜单前缀

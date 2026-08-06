@@ -29,5 +29,15 @@ public class AiRecommendationResponseVO {
     @Builder.Default
     private List<String> followUpSuggestions = new ArrayList<>();
 
+    /**
+     * 推荐阶段：INIT / NEED_CLARIFY / INTENT_READY / RECOMMENDED。
+     */
+    private String phase;
+
+    /**
+     * 是否为“换一批”结果。
+     */
+    private Boolean isNewBatch;
+
     private String error;
 }

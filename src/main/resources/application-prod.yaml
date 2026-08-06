@@ -1,0 +1,10 @@
+spring:
+  rabbitmq:
+    listener:
+      simple:
+        auto-startup: true
+
+logging:
+  level:
+    com.cc.booktalk: info
+    org.apache.tomcat.websocket: warn

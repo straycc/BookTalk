@@ -32,54 +32,22 @@ public class RecommendationController {
     /**
      * 获取个性化推荐
      */
-    @GetMapping("/personalized")
-    @ApiOperation("获取个性化推荐书籍")
-    public Result<List<PersonalizedRecVO>> getPersonalizedRecommendations(
+    @GetMapping("/books")
+    @ApiOperation("获取推荐书籍")
+    public Result<List<PersonalizedRecVO>> getRecommendedBooks(
              @RequestParam(defaultValue = "10") Integer limit) {
         Long userId = UserContext.getUser().getId();
 
-        log.info("获取个性化推荐: userId={}, limit={}", userId, limit);
+        log.info("获取推荐书籍: userId={}, limit={}", userId, limit);
         List<PersonalizedRecVO> recommendations = recommendationService.getPersonalizedRecommendations(userId, limit);
-        log.info("个性化推荐完成: userId={}, 推荐数量={}", userId, recommendations.size());
+        log.info("推荐书籍完成: userId={}, 推荐数量={}", userId, recommendations.size());
         return Result.success(recommendations);
-    }
-
-    /**
-     * 获取基于内容的推荐
-     */
-    @GetMapping("/content-based")
-    @ApiOperation("获取基于内容的推荐书籍")
-    public Result<List<PersonalizedRecVO>> getContentBasedRecommendations(
-            @RequestParam(defaultValue = "10") Integer limit) {
-        Long userId = UserContext.getUser().getId();
-
-        log.info("获取基于内容的推荐: userId={}, limit={}", userId, limit);
-        List<PersonalizedRecVO> recommendations = recommendationService.getContentBasedRecommendations(userId, limit);
-
-        log.info("基于内容的推荐完成: userId={}, 推荐数量={}", userId, recommendations.size());
-        return Result.success(recommendations);
-
-    }
-
-    /**
-     * 获取协同过滤推荐
-     */
-    @GetMapping("/collaborative")
-    @ApiOperation("获取协同过滤推荐书籍")
-    public Result<List<PersonalizedRecVO>> getCollaborativeRecommendations(
-            @RequestParam(defaultValue = "10") Integer limit) {
-            Long userId = UserContext.getUser().getId();
-
-            log.info("获取协同过滤推荐: userId={}, limit={}", userId, limit);
-            List<PersonalizedRecVO> recommendations = recommendationService.getCollaborativeRecommendations(userId, limit);
-            log.info("协同过滤推荐完成: userId={}, 推荐数量={}", userId, recommendations.size());
-            return Result.success(recommendations);
     }
 
     /**
      * 获取热门推荐
      */
-    @GetMapping("/hot")
+    @GetMapping("/books/hot")
     @ApiOperation("获取热门推荐书籍")
     public Result<List<PersonalizedRecVO>> getHotRecommendations(
             @ApiParam(value = "推荐数量限制", example = "10") @RequestParam(defaultValue = "10") Integer limit) {

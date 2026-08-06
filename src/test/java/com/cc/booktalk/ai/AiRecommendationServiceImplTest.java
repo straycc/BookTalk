@@ -7,6 +7,8 @@ import com.cc.booktalk.application.user.service.book.BookUserService;
 import com.cc.booktalk.application.user.service.recommendation.RecommendationService;
 import com.cc.booktalk.domain.ai.AiConversationSession;
 import com.cc.booktalk.infrastructure.ai.LlmClient;
+import com.cc.booktalk.infrastructure.persistence.user.mapper.book.BookUserMapper;
+import com.cc.booktalk.infrastructure.persistence.user.mapper.recommendation.UserInterestTagMapper;
 import com.cc.booktalk.interfaces.vo.user.ai.AiRecommendationResponseVO;
 import com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,12 +33,16 @@ public class AiRecommendationServiceImplTest {
         RecommendationService recommendationService = mock(RecommendationService.class);
         BookUserService bookUserService = mock(BookUserService.class);
         LlmClient llmClient = mock(LlmClient.class);
+        UserInterestTagMapper userInterestTagMapper = mock(UserInterestTagMapper.class);
+        BookUserMapper bookUserMapper = mock(BookUserMapper.class);
 
         org.springframework.test.util.ReflectionTestUtils.setField(service, "aiConversationService", conversationService);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "aiPromptService", promptService);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "recommendationService", recommendationService);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "bookUserService", bookUserService);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "llmClient", llmClient);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "userInterestTagMapper", userInterestTagMapper);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "bookUserMapper", bookUserMapper);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "objectMapper", new ObjectMapper());
 
         when(conversationService.loadSession(ArgumentMatchers.eq(1L), ArgumentMatchers.isNull()))
@@ -48,7 +54,7 @@ public class AiRecommendationServiceImplTest {
                         .build());
         when(conversationService.summarizeConversation(ArgumentMatchers.any())).thenReturn("");
         when(llmClient.isAvailable()).thenReturn(false);
-        when(recommendationService.getPersonalizedRecommendations(1L, 20)).thenReturn(List.of(
+        when(recommendationService.getPersonalizedRecommendations(ArgumentMatchers.eq(1L), ArgumentMatchers.anyInt())).thenReturn(List.of(
                 PersonalizedRecVO.builder()
                         .bookId(1L)
                         .bookTitle("终身成长")
@@ -58,7 +64,7 @@ public class AiRecommendationServiceImplTest {
                         .confidence(0.8D)
                         .build()
         ));
-        when(recommendationService.getHotRecommendations(10)).thenReturn(List.of());
+        when(recommendationService.getHotRecommendations(ArgumentMatchers.anyInt())).thenReturn(List.of());
 
         AiRecommendationResponseVO response = service.ask(1L, null, "给我推荐成长向作品", "ASK_RECOMMENDATION");
 

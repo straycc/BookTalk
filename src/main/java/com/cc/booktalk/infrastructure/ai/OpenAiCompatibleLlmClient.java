@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * OpenAI 兼容协议客户端。
@@ -80,8 +81,10 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
                 throw new BaseException("AI 模型返回为空");
             }
             return LlmChatResponse.builder().content(content).build();
-        } catch (IOException | InterruptedException e) {
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            throw new BaseException("AI 模型调用异常: " + e.getMessage());
+        } catch (IOException e) {
             throw new BaseException("AI 模型调用异常: " + e.getMessage());
         }
     }
@@ -96,6 +99,6 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
             item.put("role", message.getRole());
             item.put("content", message.getContent());
             return item;
-        }).toList();
+        }).collect(Collectors.toList());
     }
 }

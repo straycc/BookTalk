@@ -1,7 +1,7 @@
 package com.cc.booktalk.application.user.service.recommendation.profile;
 
 import com.cc.booktalk.common.event.behavior.UserBehaviorEvent;
-import com.cc.booktalk.application.user.service.recommendation.UserInterestService;
+import com.cc.booktalk.application.user.service.recommendation.profile.UserInterestService;
 import com.cc.booktalk.domain.entity.book.Book;
 import com.cc.booktalk.domain.entity.review.BookReview;
 import com.cc.booktalk.domain.entity.tag.Tag;
@@ -45,35 +45,28 @@ public class UserBehaviorInterestService {
      * 根据用户行为更新兴趣分数
      */
     public void updateUserInterest(UserBehaviorEvent behaviorDTO) {
-        try {
-            Long userId = behaviorDTO.getUserId();
-            Long targetId = behaviorDTO.getTargetId();
-            Double behaviorScore = behaviorDTO.getBehaviorScore();
-            String behaviorType = behaviorDTO.getBehaviorType();
-            String normalizedBehaviorType = behaviorType == null ? null : behaviorType.trim().toUpperCase();
+        Long userId = behaviorDTO.getUserId();
+        Long targetId = behaviorDTO.getTargetId();
+        Double behaviorScore = behaviorDTO.getBehaviorScore();
+        String behaviorType = behaviorDTO.getBehaviorType();
+        String normalizedBehaviorType = behaviorType == null ? null : behaviorType.trim().toUpperCase();
 
-            if (!userInterestDomainService.isValidBehavior(userId, targetId, behaviorScore, normalizedBehaviorType)) {
-                log.warn("用户行为数据不完整，跳过兴趣更新: userId={}, behaviorType={}, targetId={}, behaviorScore={}",
-                        userId, normalizedBehaviorType, targetId, behaviorScore);
-                return;
-            }
-
-            Long reviewBookId = null;
-            if (normalizedBehaviorType.startsWith("REVIEW_")) {
-                reviewBookId = getBookIdFromReview(targetId);
-            }
-            Long bookId = userInterestDomainService.resolveBookIdByBehavior(normalizedBehaviorType, targetId, reviewBookId);
-
-            if (bookId == null) {
-                log.warn("不支持的用户行为类型，跳过兴趣更新: userId={}, behaviorType={}", userId, behaviorType);
-                return;
-            }
-
-            updateBookInterest(userId, bookId, behaviorScore);
-
-        } catch (Exception e) {
-            log.error("更新用户兴趣分数失败", e);
+        if (!userInterestDomainService.isValidBehavior(userId, targetId, behaviorScore, normalizedBehaviorType)) {
+            throw new IllegalArgumentException("用户行为数据不完整");
         }
+
+        Long reviewBookId = null;
+        if (normalizedBehaviorType.startsWith("REVIEW_")) {
+            reviewBookId = getBookIdFromReview(targetId);
+        }
+        Long bookId = userInterestDomainService.resolveBookIdByBehavior(normalizedBehaviorType, targetId, reviewBookId);
+
+        if (bookId == null) {
+            log.debug("行为不映射到图书兴趣，跳过画像更新: userId={}, behaviorType={}", userId, behaviorType);
+            return;
+        }
+
+        updateBookInterest(userId, bookId, behaviorScore);
     }
 
     /**

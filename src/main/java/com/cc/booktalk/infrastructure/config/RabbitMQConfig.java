@@ -199,52 +199,9 @@ public class RabbitMQConfig {
      */
     @Bean
     public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
-        log.info("初始化 RabbitAdmin，Connection Factory: {}", connectionFactory.getClass().getSimpleName());
-
         RabbitAdmin rabbitAdmin = new RabbitAdmin(connectionFactory);
         rabbitAdmin.setAutoStartup(true);
-        rabbitAdmin.setIgnoreDeclarationExceptions(true); // 宽松模式，避免启动失败
-
-        // 手动触发声明所有 Bean
-        try {
-            rabbitAdmin.afterPropertiesSet();
-            log.info("RabbitAdmin 初始化完成，开始声明队列和交换机...");
-
-            // 手动声明交换机和队列
-            rabbitAdmin.declareExchange(notificationExchange());
-            log.info("通知交换机声明成功");
-
-            rabbitAdmin.declareQueue(notificationQueue());
-            log.info("通知队列声明成功");
-
-            rabbitAdmin.declareExchange(websocketExchange());
-            log.info("WebSocket交换机声明成功");
-
-            rabbitAdmin.declareQueue(websocketNotificationQueue());
-            log.info("WebSocket通知队列声明成功");
-
-            // 声明绑定关系
-            rabbitAdmin.declareBinding(notificationBinding());
-            log.info("通知绑定关系声明成功");
-
-            rabbitAdmin.declareBinding(websocketNotificationBinding());
-            log.info("WebSocket绑定关系声明成功");
-
-            // 声明用户行为相关
-            rabbitAdmin.declareExchange(userBehaviorExchange());
-            log.info("用户行为交换机声明成功");
-
-            rabbitAdmin.declareQueue(userBehaviorQueue());
-            log.info("用户行为队列声明成功");
-
-            rabbitAdmin.declareBinding(userBehaviorBinding());
-            log.info("用户行为绑定关系声明成功");
-
-        } catch (Exception e) {
-            log.error("RabbitMQ 队列/交换机声明失败", e);
-            throw e;
-        }
-
+        rabbitAdmin.setIgnoreDeclarationExceptions(true);
         return rabbitAdmin;
     }
 }

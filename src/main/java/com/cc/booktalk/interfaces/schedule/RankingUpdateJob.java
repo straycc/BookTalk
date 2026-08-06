@@ -1,7 +1,6 @@
 package com.cc.booktalk.interfaces.schedule;
 import com.cc.booktalk.application.user.service.rank.BookRankingRefreshService;
 import com.cc.booktalk.application.user.service.rank.ReviewRankingRefreshService;
-import com.xxl.job.core.handler.annotation.XxlJob;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
@@ -23,7 +22,6 @@ public class RankingUpdateJob {
     @Resource
     private ReviewRankingRefreshService reviewRankingRefreshService;
 
-    @XxlJob("calculateBookHotScores")
     @Scheduled(cron = "0 0 */2 * * ?")
     public void calculateBookHotScores() {
         bookRankingRefreshService.calculateBookHotScores();

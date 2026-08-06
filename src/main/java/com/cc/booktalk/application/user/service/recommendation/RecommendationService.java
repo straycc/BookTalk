@@ -2,6 +2,7 @@ package com.cc.booktalk.application.user.service.recommendation;
 
 import com.cc.booktalk.interfaces.vo.user.rec.PersonalizedRecVO;
 import com.cc.booktalk.interfaces.vo.user.review.HotReviewVO;
+
 import java.util.List;
 
 /**
@@ -22,26 +23,6 @@ public interface RecommendationService {
      * @return 推荐书籍列表
      */
     List<PersonalizedRecVO> getPersonalizedRecommendations(Long userId, Integer limit);
-
-    /**
-     * 获取基于内容的推荐
-     * 基于用户兴趣标签推荐相似内容
-     *
-     * @param userId 用户ID
-     * @param limit 推荐数量限制
-     * @return 推荐书籍列表
-     */
-    List<PersonalizedRecVO> getContentBasedRecommendations(Long userId, Integer limit);
-
-    /**
-     * 获取协同过滤推荐
-     * 基于相似用户的行为推荐
-     *
-     * @param userId 用户ID
-     * @param limit 推荐数量限制
-     * @return 推荐书籍列表
-     */
-    List<PersonalizedRecVO> getCollaborativeRecommendations(Long userId, Integer limit);
 
     /**
      * 获取热门推荐

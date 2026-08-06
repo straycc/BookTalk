@@ -1,7 +1,7 @@
 package com.cc.booktalk.infrastructure.aop.aspect;
 
 import com.cc.booktalk.common.context.UserContext;
-import com.cc.booktalk.application.user.service.recommendation.UserBehaviorEventDispatchService;
+import com.cc.booktalk.application.user.service.recommendation.behavior.UserBehaviorEventDispatchService;
 import com.cc.booktalk.common.event.behavior.UserBehaviorEvent;
 import com.cc.booktalk.infrastructure.aop.annotation.TrackUserBehavior;
 import lombok.extern.slf4j.Slf4j;

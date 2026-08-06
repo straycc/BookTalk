@@ -64,5 +64,11 @@ public class CommentController {
         List<CommentVO> commentVOList = commentService.bookReviewAllCommments(bookReviewId);
         return Result.success(commentVOList);
     }
+
+    @ApiOperation("查询帖子所有评论")
+    @GetMapping("/post/{postId}")
+    public Result<List<CommentVO>> postAllComments(@PathVariable("postId") Long postId) {
+        return Result.success(commentService.postAllComments(postId));
+    }
 }
 

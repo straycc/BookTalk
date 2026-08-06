@@ -273,10 +273,38 @@ public class TagUserServiceImpl extends ServiceImpl<TagUserMapper, Tag> implemen
 
 
         } catch (IOException e) {
-            log.error("查询tag失败tagName={}", tagName, e);
-            throw new BaseException(ElasticsearchConstant.ES_TAG_SEARCH_ERROR);
+            log.warn("Elasticsearch 标签查询不可用，回退到 MySQL: {}", e.getMessage());
         }
-        return null;
+        Tag tag = tagUserMapper.selectOne(new LambdaQueryWrapper<Tag>().eq(Tag::getName, tagName).last("LIMIT 1"));
+        if (tag == null) {
+            throw new BaseException(BusinessConstant.TAG_NOT_EXIST);
+        }
+        return fillCategoryName(ConvertUtils.convert(tag, TagVO.class));
+    }
+
+    @Override
+    public List<TagVO> getHotTags(int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 50));
+        List<Tag> tags = tagUserMapper.selectList(new LambdaQueryWrapper<Tag>()
+                .orderByDesc(Tag::getUsageCount)
+                .orderByDesc(Tag::getUpdateTime)
+                .last("LIMIT " + safeLimit));
+        return fillAndConvert(tags);
+    }
+
+    @Override
+    public List<TagVO> searchTags(String keyword, int limit) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return getHotTags(limit);
+        }
+        int safeLimit = Math.max(1, Math.min(limit, 20));
+        String normalized = keyword.trim();
+        List<Tag> tags = tagUserMapper.selectList(new LambdaQueryWrapper<Tag>()
+                .like(Tag::getName, normalized)
+                .orderByDesc(Tag::getUsageCount)
+                .orderByAsc(Tag::getName)
+                .last("LIMIT " + safeLimit));
+        return fillAndConvert(tags);
     }
 
 
@@ -306,8 +334,15 @@ public class TagUserServiceImpl extends ServiceImpl<TagUserMapper, Tag> implemen
             return new ArrayList<TagVO>();
         }
         // 填充分类名，并转换VO
-        List<Long> categoryIds = tags.stream().map(Tag::getCategoryId).distinct().collect(Collectors.toList());
-        Map<Long, String> categoryMap = categoryUserMapper.getCategoryNames(categoryIds); // 批量获取分类名
+        List<Long> categoryIds = tags.stream()
+                .map(Tag::getCategoryId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, String> categoryMap = categoryIds.isEmpty()
+                ? Map.of()
+                : categoryUserMapper.selectBatchIds(categoryIds).stream()
+                .collect(Collectors.toMap(Category::getId, Category::getName));
 
         return tags.stream().map(tag -> {
             TagVO tagVO = ConvertUtils.convert(tag, TagVO.class);

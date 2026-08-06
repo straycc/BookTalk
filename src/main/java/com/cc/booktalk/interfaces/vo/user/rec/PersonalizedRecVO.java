@@ -2,8 +2,10 @@ package com.cc.booktalk.interfaces.vo.user.rec;
 
 import com.cc.booktalk.interfaces.vo.user.ranking.BookRankingVO;
 import lombok.*;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 个性化推荐视图对象
@@ -64,6 +66,32 @@ public class PersonalizedRecVO implements Serializable {
      * 例如："基于您喜欢的科幻类图书推荐"、"喜欢这本书的用户也喜欢"等
      */
     private String reason;
+
+    /**
+     * 推荐理由代码
+     * 用于后续 AI 推荐解释输入
+     */
+    private List<String> reasonCodes;
+
+    /**
+     * 命中的标签
+     */
+    private List<String> matchedTags;
+
+    /**
+     * 命中的分类
+     */
+    private List<String> matchedCategories;
+
+    /**
+     * 命中的作者
+     */
+    private List<String> matchedAuthors;
+
+    /**
+     * 召回来源策略
+     */
+    private List<String> sourceStrategies;
 
     /**
      * 推荐算法类型

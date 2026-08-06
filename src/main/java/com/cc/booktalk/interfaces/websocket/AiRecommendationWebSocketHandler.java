@@ -10,6 +10,7 @@ import com.cc.booktalk.interfaces.vo.user.ai.AiRecommendationResponseVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import javax.annotation.Resource;
 import javax.websocket.CloseReason;
@@ -29,6 +30,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "app.ai.enabled", havingValue = "true")
 @ServerEndpoint(value = "/ws/ai/recommend/{userId}", configurator = SpringEndpointConfigurator.class)
 public class AiRecommendationWebSocketHandler {
 
@@ -37,6 +39,9 @@ public class AiRecommendationWebSocketHandler {
 
     @Resource
     private AiRecommendationService aiRecommendationService;
+
+    @Resource
+    private JwtUtil jwtUtil;
 
     @OnOpen
     public void onOpen(Session session, @PathParam("userId") Long userId) {
@@ -100,6 +105,11 @@ public class AiRecommendationWebSocketHandler {
 
     @OnError
     public void onError(Session session, Throwable error, @PathParam("userId") Long userId) {
+        if (isClientDisconnect(error)) {
+            log.info("AI WebSocket 客户端已断开: userId={}, sessionId={}, message={}",
+                    userId, session.getId(), extractErrorMessage(error));
+            return;
+        }
         log.error("AI WebSocket 异常: userId={}, sessionId={}", userId, session.getId(), error);
     }
 
@@ -117,6 +127,11 @@ public class AiRecommendationWebSocketHandler {
                 session.getBasicRemote().sendText(objectMapper.writeValueAsString(message));
             }
         } catch (IOException e) {
+            if (isClientDisconnect(e)) {
+                log.info("AI WebSocket 发送时客户端已断开: sessionId={}, message={}",
+                        session.getId(), extractErrorMessage(e));
+                return;
+            }
             log.error("AI WebSocket 发送失败: sessionId={}", session.getId(), e);
         }
     }
@@ -139,8 +154,8 @@ public class AiRecommendationWebSocketHandler {
 
     private UserDTO parseUserFromToken(String token) {
         try {
-            JWT jwt = JwtUtil.verifyToken(token);
-            return JwtUtil.parseUserDTO(jwt);
+            JWT jwt = jwtUtil.verifyToken(token);
+            return jwtUtil.parseUserDTO(jwt);
         } catch (Exception e) {
             log.warn("AI WebSocket token 校验失败: {}", e.getMessage());
             return null;
@@ -151,7 +166,48 @@ public class AiRecommendationWebSocketHandler {
         try {
             session.close(new CloseReason(code, reason));
         } catch (IOException e) {
+            if (isClientDisconnect(e)) {
+                log.info("关闭 AI WebSocket 时客户端已断开: sessionId={}, message={}",
+                        session.getId(), extractErrorMessage(e));
+                return;
+            }
             log.error("关闭 AI WebSocket 失败: sessionId={}", session.getId(), e);
         }
+    }
+
+    /**
+     * 判断是否为客户端主动断开连接导致的异常，避免把常见断连场景打成错误日志。
+     */
+    private boolean isClientDisconnect(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof IOException) {
+                String message = current.getMessage();
+                if (message != null) {
+                    String lowerMessage = message.toLowerCase();
+                    if (message.contains("软件中止了一个已建立的连接")
+                            || message.contains("远程主机强迫关闭了一个现有的连接")
+                            || lowerMessage.contains("broken pipe")
+                            || lowerMessage.contains("connection reset")
+                            || lowerMessage.contains("forcibly closed")
+                            || lowerMessage.contains("connection aborted")) {
+                        return true;
+                    }
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private String extractErrorMessage(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current.getMessage() != null && !current.getMessage().isBlank()) {
+                return current.getMessage();
+            }
+            current = current.getCause();
+        }
+        return "unknown";
     }
 }

@@ -42,4 +42,19 @@ public class AiParsedIntent {
      * 原始问题摘要，便于后续追问复用。
      */
     private String querySummary;
+
+    /**
+     * 意图置信度，范围 0-1。
+     */
+    private Double intentConfidence;
+
+    /**
+     * 是否需要追问澄清。
+     */
+    private Boolean needClarify;
+
+    /**
+     * 需要追问时给用户的澄清问题。
+     */
+    private String clarifyQuestion;
 }

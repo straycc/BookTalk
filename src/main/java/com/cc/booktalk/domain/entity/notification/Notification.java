@@ -54,7 +54,7 @@ public class Notification {
 
     /**
      * 目标类型
-     * BOOK_REVIEW-书评, COMMENT-评论, USER-用户
+     * REVIEW-书评, COMMENT-评论, USER-用户
      */
     @TableField("target_type")
     private String targetType;

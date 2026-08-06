@@ -21,7 +21,9 @@ public class AiPromptServiceImpl implements AiPromptService {
     public LlmChatRequest buildIntentRequest(String userInput, String conversationSummary) {
         String systemPrompt = "你是图书推荐意图解析器。"
                 + "你只能根据用户问题提取结构化推荐条件，输出必须是 JSON。"
-                + "字段固定为 intent,themes,preferredAuthors,preferredCategories,tone,difficulty,constraints,exclude,querySummary。"
+                + "字段固定为 intent,themes,preferredAuthors,preferredCategories,tone,difficulty,constraints,exclude,querySummary,intentConfidence,needClarify,clarifyQuestion。"
+                + "intentConfidence 取值范围 0-1。"
+                + "当信息不足时 needClarify=true，并给出一条 clarifyQuestion。"
                 + "不要推荐书，不要输出 markdown，不要编造站外信息。";
 
         String userPrompt = "历史上下文：" + blankAsNone(conversationSummary)
@@ -43,7 +45,10 @@ public class AiPromptServiceImpl implements AiPromptService {
         String systemPrompt = "你是站内图书推荐助手。"
                 + "你只能基于给出的站内候选书回答。"
                 + "输出必须是 JSON，字段固定为 answer,bookReasons,followUpSuggestions。"
-                + "bookReasons 的 key 使用 bookId，value 是一句推荐理由。"
+                + "answer 必须是一段完整自然语言总结，长度控制在 120 到 220 字，"
+                + "要先概括这组书为什么适合用户，再点出其中 2 到 4 本书各自更适合什么阅读偏好。"
+                + "不要只写一句“我整理了以下书单”，也不要把 answer 写成列表标题。"
+                + "bookReasons 的 key 使用 bookId，value 是一句简短推荐理由，可选。"
                 + "不能推荐候选之外的书，不能编造剧情和站外书单。";
 
         String books = context.getCandidateBooks().stream()
@@ -53,7 +58,7 @@ public class AiPromptServiceImpl implements AiPromptService {
                 + "\n用户问题：" + context.getUserInput()
                 + "\n结构化意图：" + context.getParsedIntent()
                 + "\n候选书：\n" + books
-                + "\n请输出 JSON。";
+                + "\n请输出 JSON，其中 answer 要承担主要推荐理由，bookReasons 只做补充。";
 
         return LlmChatRequest.builder()
                 .messages(List.of(

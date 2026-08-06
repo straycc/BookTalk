@@ -1,5 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.cc.booktalk.infrastructure.persistence.user.mapper.bookShelf.BookShelfMapper">
-
+    <select id="selectShelfPage" resultType="com.cc.booktalk.interfaces.vo.user.bookShelf.BookShelfVO">
+        SELECT bs.id,
+               bs.book_id AS bookId,
+               b.title AS bookName,
+               b.cover_url AS bookCover,
+               b.author,
+               b.publisher,
+               bs.status,
+               bs.create_time AS createTime,
+               bs.update_time AS updateTime
+        FROM book_shelf bs
+        INNER JOIN book b ON b.id = bs.book_id
+        WHERE bs.user_id = #{userId}
+        <if test="status != null and status != ''">
+            AND bs.status = #{status}
+        </if>
+        <if test="bookName != null and bookName != ''">
+            AND b.title LIKE CONCAT('%', #{bookName}, '%')
+        </if>
+        ORDER BY
+        <choose>
+            <when test="sortBy == 'BOOK_NAME'">b.title</when>
+            <otherwise>bs.create_time</otherwise>
+        </choose>
+        <choose>
+            <when test="sortOrder == 'ASC'">ASC</when>
+            <otherwise>DESC</otherwise>
+        </choose>, bs.id DESC
+    </select>
 </mapper>

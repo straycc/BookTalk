@@ -151,7 +151,7 @@ public class NotificationEventPublisher {
      * @return 内容文本
      */
     private String buildLikeContent(String targetType) {
-        if (NotificationConstant.TARGET_TYPE_BOOK_REVIEW.equals(targetType)) {
+        if (NotificationConstant.TARGET_TYPE_REVIEW.equals(targetType)) {
             return NotificationConstant.TEMPLATE_LIKE_REVIEW;
         } else if (NotificationConstant.TARGET_TYPE_COMMENT.equals(targetType)) {
             return NotificationConstant.TEMPLATE_LIKE_COMMENT;
@@ -166,7 +166,7 @@ public class NotificationEventPublisher {
      * @return 内容文本
      */
     private String buildCommentContent(String targetType, String commentContent) {
-        if (NotificationConstant.TARGET_TYPE_BOOK_REVIEW.equals(targetType)) {
+        if (NotificationConstant.TARGET_TYPE_REVIEW.equals(targetType)) {
             String truncatedContent = commentContent.length() > 30 ?
                     commentContent.substring(0, 30) + "..." : commentContent;
             return NotificationConstant.TEMPLATE_COMMENT_REVIEW.replace("{content}", truncatedContent);

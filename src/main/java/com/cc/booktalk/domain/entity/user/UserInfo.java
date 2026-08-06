@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.io.Serializable;
 
 import lombok.*;
@@ -59,20 +60,14 @@ public class UserInfo implements Serializable {
      */
     private String gender;
 
+    private LocalDate birthday;
+
+    private String region;
+
     /**
      * 个性签名
      */
     private String signature;
-
-    /**
-     * 用户等级
-     */
-    private Integer level;
-
-    /**
-     * 经验值
-     */
-    private Integer experience;
 
     /**
      * 资料创建时间

@@ -68,7 +68,8 @@ public class NotificationRequest {
      */
     @UtilityClass
     public static class TargetType {
-        public static final String BOOK_REVIEW = "BOOK_REVIEW";
+        public static final String REVIEW = "REVIEW";
+        public static final String POST = "POST";
         public static final String COMMENT = "COMMENT";
         public static final String USER = "USER";
     }

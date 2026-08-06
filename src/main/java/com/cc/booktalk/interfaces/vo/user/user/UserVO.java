@@ -4,6 +4,7 @@ package com.cc.booktalk.interfaces.vo.user.user;
 import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 public class UserVO implements Serializable {
@@ -34,17 +35,17 @@ public class UserVO implements Serializable {
     /** 性别（M/F/O） */
     private String gender;
 
+    /** 生日 */
+    private LocalDate birthday;
+
+    /** 所在地区 */
+    private String region;
+
     /** 个性签名 */
     private String signature;
 
     /** 背景图 */
     private String background;
-
-    /** 用户等级 */
-    private Integer level;
-
-    /** 经验值 */
-    private Integer experience;
 
     /** 账号创建时间 */
     private LocalDateTime createTime;

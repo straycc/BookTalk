@@ -7,12 +7,10 @@ import com.cc.booktalk.common.context.UserContext;
 import com.cc.booktalk.common.exception.BaseException;
 import com.cc.booktalk.interfaces.dto.user.bookShelf.BookShelfAddDTO;
 import com.cc.booktalk.interfaces.dto.user.bookShelf.BookShelfQueryDTO;
-import com.cc.booktalk.domain.entity.book.Book;
 import com.cc.booktalk.domain.entity.bookShelf.BookShelf;
 import com.cc.booktalk.common.result.PageResult;
 import com.cc.booktalk.interfaces.vo.user.bookShelf.BookShelfVO;
 import com.cc.booktalk.interfaces.vo.user.bookShelf.BookShelfStatsVO;
-import com.cc.booktalk.infrastructure.persistence.user.mapper.book.BookUserMapper;
 import com.cc.booktalk.application.user.service.bookShelf.BookShelfService;
 import com.cc.booktalk.infrastructure.persistence.user.mapper.bookShelf.BookShelfMapper;
 import com.github.pagehelper.PageHelper;
@@ -23,8 +21,6 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 个人书架服务实现类
@@ -35,9 +31,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class BookShelfServiceImpl extends ServiceImpl<BookShelfMapper, BookShelf> implements BookShelfService {
-
-    @Resource
-    private BookUserMapper bookMapper;
 
     @Override
     public void addToShelf(BookShelfAddDTO addDTO) {
@@ -95,6 +88,7 @@ public class BookShelfServiceImpl extends ServiceImpl<BookShelfMapper, BookShelf
 
         BookShelf bookShelf = new BookShelf();
         bookShelf.setStatus(status);
+        bookShelf.setUpdateTime(java.time.LocalDateTime.now());
 
         boolean result = this.update(bookShelf, queryWrapper);
         if (!result) {
@@ -106,38 +100,21 @@ public class BookShelfServiceImpl extends ServiceImpl<BookShelfMapper, BookShelf
 
     @Override
     public PageResult<BookShelfVO> getShelfList(BookShelfQueryDTO queryDTO) {
+        if (queryDTO == null) {
+            throw new BaseException(BusinessConstant.PARAM_ERROR);
+        }
         Long userId = getCurrentUserId();
-
-        // 构建查询条件
-        LambdaQueryWrapper<BookShelf> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(BookShelf::getUserId, userId);
-
-        // 状态筛选
-        if (StringUtils.hasText(queryDTO.getStatus()) && !"null".equals(queryDTO.getStatus())) {
-            queryWrapper.eq(BookShelf::getStatus, queryDTO.getStatus());
-        }
-
-        // 排序
-        if ("CREATE_TIME".equals(queryDTO.getSortBy())) {
-            queryWrapper.orderBy(true, "DESC".equals(queryDTO.getSortOrder()),
-                               BookShelf::getCreateTime);
-        } else if ("BOOK_NAME".equals(queryDTO.getSortBy())) {
-            // TODO 后续修改实现
-            queryWrapper.orderBy(true, "DESC".equals(queryDTO.getSortOrder()),
-                               BookShelf::getCreateTime);
-        }
-
-        // 使用PageHelper进行分页
         PageHelper.startPage(queryDTO.getPage(), queryDTO.getSize());
-        List<BookShelf> shelfList = this.list(queryWrapper);
-
-        // 获取分页信息
-        PageInfo<BookShelf> pageInfo = new PageInfo<>(shelfList);
-
-        // 转换为VO（包含书名筛选）
-        List<BookShelfVO> voList = convertToVOList(shelfList, queryDTO.getBookName());
-
-        return new PageResult<>(pageInfo.getTotal(), voList);
+        List<BookShelfVO> shelfList = baseMapper.selectShelfPage(
+                userId,
+                normalizeStatus(queryDTO.getStatus()),
+                queryDTO.getBookName(),
+                "BOOK_NAME".equals(queryDTO.getSortBy()) ? "BOOK_NAME" : "CREATE_TIME",
+                "ASC".equals(queryDTO.getSortOrder()) ? "ASC" : "DESC"
+        );
+        shelfList.forEach(item -> item.setStatusDesc(getStatusDesc(item.getStatus())));
+        PageInfo<BookShelfVO> pageInfo = new PageInfo<>(shelfList);
+        return new PageResult<>(pageInfo.getTotal(), shelfList);
     }
 
     @Override
@@ -161,6 +138,11 @@ public class BookShelfServiceImpl extends ServiceImpl<BookShelfMapper, BookShelf
                     break;
                 case "READ":
                     stats.setReadCount(stats.getReadCount() + 1);
+                    java.time.LocalDateTime completedAt = shelf.getUpdateTime() == null
+                            ? shelf.getCreateTime() : shelf.getUpdateTime();
+                    if (completedAt != null && completedAt.getYear() == java.time.Year.now().getValue()) {
+                        stats.setYearlyReadCount(stats.getYearlyReadCount() + 1);
+                    }
                     break;
             }
         }
@@ -181,50 +163,8 @@ public class BookShelfServiceImpl extends ServiceImpl<BookShelfMapper, BookShelf
         return this.count(queryWrapper) > 0;
     }
 
-    /**
-     * 转换实体列表为VO列表
-     */
-    private List<BookShelfVO> convertToVOList(List<BookShelf> shelfList, String bookNameFilter) {
-        if (shelfList.isEmpty()) {
-            return List.of();
-        }
-
-        // 获取书籍信息
-        List<Long> bookIds = shelfList.stream()
-                                    .map(BookShelf::getBookId)
-                                    .collect(Collectors.toList());
-
-        // 调用BookMapper获取书籍信息
-        List<Book> books = bookMapper.selectBatchIds(bookIds);
-        Map<Long, Book> bookMap = books.stream()
-                                     .collect(Collectors.toMap(Book::getId, book -> book));
-
-        // 转换为VO
-        return shelfList.stream()
-                      .map(shelf -> {
-                          BookShelfVO vo = new BookShelfVO();
-                          vo.setId(shelf.getId());
-                          vo.setBookId(shelf.getBookId());
-                          vo.setStatus(shelf.getStatus());
-                          vo.setStatusDesc(getStatusDesc(shelf.getStatus()));
-                          vo.setCreateTime(shelf.getCreateTime());
-                          vo.setUpdateTime(shelf.getUpdateTime());
-
-                          // 设置书籍信息
-                          Book book = bookMap.get(shelf.getBookId());
-                          if (book != null) {
-                              vo.setBookName(book.getTitle());
-                              vo.setBookCover(book.getCoverUrl());
-                              vo.setAuthor(book.getAuthor());
-                              vo.setPublisher(book.getPublisher());
-                          }
-
-                          return vo;
-                      })
-                      // 书名筛选
-                      .filter(vo -> !StringUtils.hasText(bookNameFilter) ||
-                                   (vo.getBookName() != null && vo.getBookName().contains(bookNameFilter)))
-                      .collect(Collectors.toList());
+    private String normalizeStatus(String status) {
+        return StringUtils.hasText(status) && !"null".equalsIgnoreCase(status) ? status : null;
     }
 
     /**

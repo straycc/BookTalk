@@ -65,4 +65,11 @@ public interface TagUserService extends IService<Tag> {
      * @return
      */
     TagVO getByTagName(String tagName);
+
+    List<TagVO> getHotTags(int limit);
+
+    /**
+     * 按名称模糊搜索公共标签。
+     */
+    List<TagVO> searchTags(String keyword, int limit);
 }

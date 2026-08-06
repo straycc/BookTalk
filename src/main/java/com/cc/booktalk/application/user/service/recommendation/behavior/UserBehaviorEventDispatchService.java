@@ -4,6 +4,8 @@ import com.cc.booktalk.common.event.behavior.UserBehaviorEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import javax.annotation.Resource;
 
@@ -24,6 +26,19 @@ public class UserBehaviorEventDispatchService {
         if (behaviorEvent == null) {
             return;
         }
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    dispatch(behaviorEvent);
+                }
+            });
+            return;
+        }
+        dispatch(behaviorEvent);
+    }
+
+    private void dispatch(UserBehaviorEvent behaviorEvent) {
         try {
             rabbitTemplate.convertAndSend(
                     USER_BEHAVIOR_EXCHANGE,

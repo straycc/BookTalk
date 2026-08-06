@@ -10,7 +10,8 @@ import java.util.Arrays;
 @AllArgsConstructor
 public enum BehaviorTargetType {
     BOOK("BOOK"),
-    REVIEW("REVIEW");
+    REVIEW("REVIEW"),
+    POST("POST");
 
     @EnumValue
     private final String code;

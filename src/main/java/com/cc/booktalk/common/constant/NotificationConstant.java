@@ -16,7 +16,7 @@ public class NotificationConstant {
     public static final String NOTIFICATION_TYPE_SYSTEM = "SYSTEM";
 
     // 目标类型
-    public static final String TARGET_TYPE_BOOK_REVIEW = "BOOK_REVIEW";
+    public static final String TARGET_TYPE_REVIEW = "REVIEW";
     public static final String TARGET_TYPE_COMMENT = "COMMENT";
     public static final String TARGET_TYPE_USER = "USER";
 

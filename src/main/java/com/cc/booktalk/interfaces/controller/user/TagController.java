@@ -60,47 +60,6 @@ public class TagController {
     }
 
     /**
-     * 用户新建标签
-     * @param tagDTO
-     * @return
-     */
-    @ApiOperation("用户新建标签")
-    @PostMapping("/add")
-    public Result<String> creatNewTag(@RequestBody TagDTO tagDTO) {
-        tagUserService.creatNewTag(tagDTO);
-        return Result.success(BusinessConstant.TAG_CREAT_SUCESS);
-    }
-
-    /**
-     * 用户删除标签
-     * @param tagId
-     * @return
-     */
-    @ApiOperation("用户删除标签")
-    @DeleteMapping("/delete/{id}")
-    public Result<String> deleteTagById(@PathVariable("id") Long tagId) {
-        tagUserService.deleteTagById(tagId);
-        return Result.success(BusinessConstant.TAG_DELETE_SUCESS);
-    }
-
-    /**
-     * 用户修改标签
-     * @param tagId 标签ID
-     * @param tagDTO 标签DTO（包含新名称、描述等）
-     * @return
-     */
-    @ApiOperation("用户修改标签")
-    @PutMapping("/update/{tagId}")
-    public Result<String> updateTag(@PathVariable("tagId") Long tagId, @RequestBody TagDTO tagDTO) {
-        if (tagDTO.getId() != null && !tagId.equals(tagDTO.getId())) {
-            throw new BaseException(BusinessConstant.PARAM_ERROR);
-        }
-        tagDTO.setId(tagId);
-        tagUserService.updateTag(tagDTO);
-        return Result.success(BusinessConstant.TAG_UPDATE_SUCESS);
-    }
-
-    /**
      * 查询用户所有标签（标签较少暂不使用分页）
      * @param userId
      * @return
@@ -119,7 +78,14 @@ public class TagController {
     @ApiOperation("获取热度标签")
     @GetMapping("/hotTag")
     public Result<List<TagVO>> hotTag() {
-        return Result.success();
+        return Result.success(tagUserService.getHotTags(20));
+    }
+
+    @ApiOperation("搜索标签")
+    @GetMapping("/search")
+    public Result<List<TagVO>> searchTags(@RequestParam String keyword,
+                                         @RequestParam(defaultValue = "10") int limit) {
+        return Result.success(tagUserService.searchTags(keyword, limit));
     }
 
     /**

@@ -15,7 +15,7 @@ public class UserRegisterDTO {
     private String username;
 
     @NotBlank(message = "密码不能为空")
-    @Size(min = 6, max = 20, message = "密码长度应在6-12个字符之间")
+    @Size(min = 8, max = 64, message = "密码长度应在8-64个字符之间")
     private String password;
 
     @NotBlank(message = "确认密码不能为空")
